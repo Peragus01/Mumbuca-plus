@@ -5,3 +5,5 @@ artifacts
 cache
 typechain-types
 coverage
+anchor/target
+anchor/test-ledger
