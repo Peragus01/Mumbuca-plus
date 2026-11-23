@@ -47,8 +47,7 @@ function decodeSecretKey(raw: string): Uint8Array | null {
   }
 }
 
-const schema = z
-  .object({
+const base = z.object({
     DATABASE_URL: z.string().min(1),
     DATABASE_SSL: bool,
     PORT: intStr(3000),
@@ -82,7 +81,11 @@ const schema = z
     MINT_CONFIRM_TIMEOUT_MS: intStr(60000),
     MAX_MINT_ATTEMPTS: intStr(5),
     LOW_SOL_THRESHOLD_LAMPORTS: bigintStr('100000000'),
-  })
+  });
+
+export const ENV_KEYS: readonly string[] = Object.keys(base.shape);
+
+const schema = base
   .superRefine((env, ctx) => {
     const prefix = env.PROVIDER_ENV === 'live' ? 'ozav_sk_live_' : 'ozav_sk_test_';
     if (!env.OZAV_API_KEY.startsWith(prefix)) {

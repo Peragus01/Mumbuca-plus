@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { base58 } from '@scure/base';
-import { loadEnv } from '../../src/config/env.js';
+import { readFileSync } from 'node:fs';
+import { loadEnv, ENV_KEYS } from '../../src/config/env.js';
 import { validEnv, validMinter } from '../helpers/valid-env.js';
 
 function errorOf(source: NodeJS.ProcessEnv): string {
@@ -11,6 +12,16 @@ function errorOf(source: NodeJS.ProcessEnv): string {
   }
   throw new Error('expected loadEnv to throw');
 }
+
+describe('.env.example', () => {
+  it('lists exactly the keys of the Env schema', () => {
+    const text = readFileSync(new URL('../../.env.example', import.meta.url), 'utf8');
+    const keys = text.split(String.fromCharCode(10)).map((x) => x.trim()).filter((x) => /^[A-Z_]+=/.test(x)).map((x) => x.split("=")[0]!);
+    expect([...keys].sort()).toEqual([...ENV_KEYS].sort());
+    for (const k of ['SOLANA_RPC_URL', 'SOLANA_CLUSTER', 'PROGRAM_ID', 'MINTER_SECRET_KEY']) expect(keys).toContain(k);
+    for (const k of ['AMOY_RPC_URL', 'CHAIN_ID', 'TOKEN_ADDRESS', 'TOKEN_DEPLOY_BLOCK', 'MINTER_PRIVATE_KEY']) expect(keys).not.toContain(k);
+  });
+});
 
 describe('loadEnv', () => {
   it('loads a valid env with defaults', () => {

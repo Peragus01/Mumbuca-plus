@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { keccak_256 } from '@noble/hashes/sha3';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import { parseBrlToCents, centsToUnits, formatUnitsMum, formatCentsBRL, paymentRefFor } from '../../src/domain/money.js';
 
 describe('parseBrlToCents', () => {
@@ -31,6 +29,8 @@ describe('conversions', () => {
     expect(formatCentsBRL(5n)).toBe('R$ 0,05');
   });
   it('paymentRefFor', () => {
-    expect(paymentRefFor('ozav', 'ozav_tr_1')).toBe('0x' + bytesToHex(keccak_256(utf8ToBytes('ozav:ozav_tr_1'))));
+    expect(paymentRefFor('ozav', 'ozav_tr_1')).toBe(
+      '0x20f0a97065550aaa713b14cdf7a5934e3e299056efb3266d31157fc1ed9f9a94',
+    );
   });
 });
