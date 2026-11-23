@@ -12,11 +12,11 @@
 2. [O que o Mumbuca+ faz](#2-o-que-o-mumbuca-faz)
 3. [A rota do dinheiro: BRL → BRS → Mumbuca+](#3-a-rota-do-dinheiro-brl--brs--mumbuca)
 4. [Provedor de liquidez](#4-provedor-de-liquidez)
-5. [Tese jurídica: o M+ é um utility token do ecossistema de Maricá](#5-tese-jurídica-o-m-é-um-utility-token-do-ecossistema-de-maricá)
+5. [Tese jurídica: o Mum+ é um utility token do ecossistema de Maricá](#5-tese-jurídica-o-m-é-um-utility-token-do-ecossistema-de-maricá)
 6. [Arquitetura](#6-arquitetura)
 7. [Fluxo ponta a ponta](#7-fluxo-ponta-a-ponta)
 8. [Segurança e garantias](#8-segurança-e-garantias)
-9. [O token Mumbuca+ (M+)](#9-o-token-mumbuca-m)
+9. [O token Mumbuca+ (Mum+)](#9-o-token-mumbuca-m)
 10. [Como isso fortalece a política pública](#10-como-isso-fortalece-a-política-pública)
 11. [Escopo da prova de conceito](#11-escopo-da-prova-de-conceito)
 12. [Estrutura do repositório e documentação](#12-estrutura-do-repositório-e-documentação)
@@ -45,7 +45,7 @@ O relatório propõe uma **carteira dupla tokenizada**. Este repositório constr
 2. O **provedor de liquidez** (OZAV) recebe os reais.
 3. O backend do Mumbuca+ **detecta a chegada do dinheiro** por webhook ou por consulta periódica, e **confirma direto na API do provedor**. Nunca confia apenas na notificação.
 4. O backend executa `mint()` no contrato inteligente.
-5. Os **Mumbuca+ (M+) aparecem na carteira MetaMask** da cidadã, 1 M+ para cada R$ 1,00 recebido.
+5. Os **Mumbuca+ (Mum+) aparecem na carteira MetaMask** da cidadã, 1 Mum+ para cada R$ 1,00 recebido.
 6. A transação fica **pública e verificável** na PolygonScan.
 7. Nenhum pagamento gera emissão duplicada, mesmo com reenvios, quedas de rede ou reinícios do servidor.
 
@@ -57,14 +57,14 @@ flowchart LR
     B -->|"BRL → BRS<br/>(token do real, Solana)<br/>sem perna de câmbio"| C[("Reserva em BRS<br/>conta custodiada")]
     B -.->|"sinal: BRL recebido"| D["Backend Mumbuca+<br/>valida na API da OZAV"]
     D -->|"mint 1:1"| E["Contrato Mumbuca+<br/>Polygon"]
-    E -->|"M+"| F["Carteira da cidadã<br/>MetaMask"]
+    E -->|"Mum+"| F["Carteira da cidadã<br/>MetaMask"]
 ```
 
 - **BRL:** o cidadão paga em reais, pelo Pix, a moeda que ele já usa.
 - **BRS:** o provedor de liquidez converte os reais em **BRS**, um token referenciado no real que roda na Solana e é oferecido pela OZAV. A conversão BRL→BRS **não tem perna de câmbio**: não há cotação contra moeda estrangeira nem trava de câmbio, e a taxa é 1:1 no mesmo padrão monetário. O BRS fica numa carteira custodiada e serve de **reserva em reais** da operação.
-- **Mumbuca+:** com a chegada do BRL confirmada, o sistema emite **M+ na mesma quantidade em reais** na carteira do cidadão. O M+ é a camada de **moeda social**: é nela que entram as regras da política pública, como o território, o incentivo ao comércio local e o crédito controlado previsto no relatório.
+- **Mumbuca+:** com a chegada do BRL confirmada, o sistema emite **Mum+ na mesma quantidade em reais** na carteira do cidadão. O Mum+ é a camada de **moeda social**: é nela que entram as regras da política pública, como o território, o incentivo ao comércio local e o crédito controlado previsto no relatório.
 
-Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim M+ (moeda social com paridade com o real). Nenhuma perna envolve moeda estrangeira.
+Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim Mum+ (moeda social com paridade com o real). Nenhuma perna envolve moeda estrangeira.
 
 > **Ambientes:** a mesma rota BRL → BRS → Mumbuca+ roda no sandbox da OZAV (Pix simulado, valores entre R$ 1.000 e R$ 10.000) e no ambiente real (Pix de verdade, mínimo de R$ 11). O ativo de destino é configurado por uma única variável (`OZAV_TARGET_CURRENCY=BRS`).
 
@@ -88,20 +88,20 @@ O Mumbuca+ **não guarda dinheiro, não converte moedas e não faz o Pix**. Essa
 
 Detalhes técnicos: [`docs/providers/ozav.md`](docs/providers/ozav.md) (criado durante a implementação).
 
-## 5. Tese jurídica: o M+ é um utility token do ecossistema de Maricá
+## 5. Tese jurídica: o Mum+ é um utility token do ecossistema de Maricá
 
 > ⚠️ **Esta seção apresenta uma tese em construção, não um parecer jurídico.** Ela precisa ser validada por advogado especializado em regulação financeira e em direito administrativo municipal antes de qualquer uso fora do ambiente de testes.
 
 ### 5.1 A tese em uma frase
 
-O **Mumbuca+ (M+) é um token de utilidade (utility token)** do ecossistema da moeda social de Maricá. Ele dá ao titular acesso a produtos e serviços da rede credenciada do município, dentro das regras de um programa público. Por isso fica **fora do conceito legal de "ativo virtual"** da Lei nº 14.478/2022 e, consequentemente, fora das regras de câmbio para prestadores de serviços de ativos virtuais do Banco Central. **Quem regula o uso desse token é o gestor do próprio ecossistema:** o Município de Maricá, por lei municipal, e o Banco Comunitário Mumbuca, que administra a rede.
+O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da moeda social de Maricá. Ele dá ao titular acesso a produtos e serviços da rede credenciada do município, dentro das regras de um programa público. Por isso fica **fora do conceito legal de "ativo virtual"** da Lei nº 14.478/2022 e, consequentemente, fora das regras de câmbio para prestadores de serviços de ativos virtuais do Banco Central. **Quem regula o uso desse token é o gestor do próprio ecossistema:** o Município de Maricá, por lei municipal, e o Banco Comunitário Mumbuca, que administra a rede.
 
 ### 5.2 Fundamentos
 
 1. **A lei exclui expressamente os tokens de utilidade do conceito de ativo virtual.** O art. 3º da Lei nº 14.478/2022 define ativo virtual como *"a representação digital de valor que pode ser negociada ou transferida por meios eletrônicos e utilizada para realização de pagamentos ou com propósito de investimento"*. Em seguida exclui, no inciso III, os *"instrumentos que provejam ao seu titular acesso a produtos ou serviços especificados ou a benefício proveniente desses produtos ou serviços, a exemplo de pontos e recompensas de programas de fidelidade"*.
-2. **O M+ é instrumento de acesso a um benefício de programa público.** Ele só é aceito na rede credenciada de Maricá e carrega as regras da política pública: o incentivo de 5% no comércio local e as categorias essenciais do crédito externo (saúde, transporte e emergência), previstos no relatório. Assim como os pontos de um programa de fidelidade, ele vale dentro de um ecossistema definido por quem o administra.
-3. **Não há propósito de investimento.** A paridade é fixa (1 M+ = R$ 1,00) e não há rendimento, valorização, venda pública nem mercado secundário promovido pelo emissor. A CVM, no Parecer de Orientação nº 40/2022, separa os tokens de utilidade dos tokens que são valores mobiliários pela ausência de expectativa de retorno sobre o esforço de terceiros.
-4. **Sem "ativo virtual", não há câmbio de ativo virtual.** O art. 76-A da Resolução BCB nº 277/2022 (incluído pela Resolução BCB nº 521/2025) leva ao mercado de câmbio a *prestação de serviços de ativos virtuais*. Se o M+ não é ativo virtual, a emissão e a circulação dele não entram nessa regra. Além disso, nenhuma etapa envolve moeda estrangeira.
+2. **O Mum+ é instrumento de acesso a um benefício de programa público.** Ele só é aceito na rede credenciada de Maricá e carrega as regras da política pública: o incentivo de 5% no comércio local e as categorias essenciais do crédito externo (saúde, transporte e emergência), previstos no relatório. Assim como os pontos de um programa de fidelidade, ele vale dentro de um ecossistema definido por quem o administra.
+3. **Não há propósito de investimento.** A paridade é fixa (1 Mum+ = R$ 1,00) e não há rendimento, valorização, venda pública nem mercado secundário promovido pelo emissor. A CVM, no Parecer de Orientação nº 40/2022, separa os tokens de utilidade dos tokens que são valores mobiliários pela ausência de expectativa de retorno sobre o esforço de terceiros.
+4. **Sem "ativo virtual", não há câmbio de ativo virtual.** O art. 76-A da Resolução BCB nº 277/2022 (incluído pela Resolução BCB nº 521/2025) leva ao mercado de câmbio a *prestação de serviços de ativos virtuais*. Se o Mum+ não é ativo virtual, a emissão e a circulação dele não entram nessa regra. Além disso, nenhuma etapa envolve moeda estrangeira.
 5. **Quem regula o token é o gestor do ecossistema.** A Mumbuca é uma moeda social instituída e disciplinada pelo Município de Maricá (o relatório cita a Lei Municipal nº 3.673/2025) e operada pelo Banco Comunitário Mumbuca. O credenciamento de lojistas, as regras de uso, os limites e a emissão contra entrada de reais são decisões desse gestor. O Mumbuca+ só leva essas regras para um token. Moedas sociais seguem esse modelo desde o Banco Palmas (1998): **lastro em reais, paridade 1:1, circulação territorial e ausência de curso forçado**, como descreve material do próprio Banco Central.
 6. **Cada camada tem o seu regulador.** A operação financeira fica com quem é regulado para ela:
 
@@ -109,7 +109,7 @@ O **Mumbuca+ (M+) é um token de utilidade (utility token)** do ecossistema da m
 |---|---|---|---|
 | Entrada | BRL via Pix | moeda nacional | Banco Central (Pix) e a instituição recebedora (provedor de liquidez) |
 | Reserva | BRS | ativo referenciado no real | Provedor de liquidez (OZAV), no regime de prestadores de serviços de ativos virtuais |
-| Uso | M+ | utility token da moeda social | Município de Maricá e Banco Comunitário Mumbuca |
+| Uso | Mum+ | utility token da moeda social | Município de Maricá e Banco Comunitário Mumbuca |
 
 ### 5.3 Como o desenho técnico reforça a tese
 
@@ -120,16 +120,16 @@ O **Mumbuca+ (M+) é um token de utilidade (utility token)** do ecossistema da m
 
 ### 5.4 Pontos de atenção
 
-- **"Produtos ou serviços especificados".** Um token aceito em qualquer comércio credenciado, com paridade em real, pode ser lido como **meio de pagamento**. Nessa leitura ele seria tratado como ativo virtual ou como instrumento de arranjo de pagamento (Lei nº 12.865/2013). A tese fica mais forte quanto mais fechada e definida for a rede e quanto menos o M+ circular fora dela.
-- **Competência da União sobre moeda.** Emitir moeda é competência da União (CF, art. 21, VII), e legislar sobre sistema monetário é privativo dela (CF, art. 22, VI). Por isso a tese trata o M+ como **instrumento de um programa municipal, sem curso forçado**, e nunca como moeda.
+- **"Produtos ou serviços especificados".** Um token aceito em qualquer comércio credenciado, com paridade em real, pode ser lido como **meio de pagamento**. Nessa leitura ele seria tratado como ativo virtual ou como instrumento de arranjo de pagamento (Lei nº 12.865/2013). A tese fica mais forte quanto mais fechada e definida for a rede e quanto menos o Mum+ circular fora dela.
+- **Competência da União sobre moeda.** Emitir moeda é competência da União (CF, art. 21, VII), e legislar sobre sistema monetário é privativo dela (CF, art. 22, VI). Por isso a tese trata o Mum+ como **instrumento de um programa municipal, sem curso forçado**, e nunca como moeda.
 - **A perna BRL→BRS.** O inciso IV do art. 76-A alcança, na literalidade, a *"compra, venda ou troca de ativos virtuais referenciados em moeda fiduciária"*. Se a aquisição de BRS for enquadrada aí, as obrigações são do provedor de liquidez, que é quem presta esse serviço, e não do ecossistema Mumbuca+.
 
 ### 5.5 Perguntas para a validação jurídica
 
-1. O M+, com uso restrito à rede credenciada de Maricá e regras de programa público, se enquadra na exclusão do art. 3º, III, da Lei nº 14.478/2022?
+1. O Mum+, com uso restrito à rede credenciada de Maricá e regras de programa público, se enquadra na exclusão do art. 3º, III, da Lei nº 14.478/2022?
 2. Que características (rede fechada, restrição de transferência, ausência de resgate livre) tornam essa exclusão mais segura?
 3. A lei municipal da Mumbuca dá base para o Município e o Banco Comunitário serem os gestores e reguladores do token, ou é preciso uma norma municipal específica para a versão tokenizada?
-4. Qual entidade deve ser a emissora formal do M+ numa operação real, e qual é a relação dela com o provedor de liquidez?
+4. Qual entidade deve ser a emissora formal do Mum+ numa operação real, e qual é a relação dela com o provedor de liquidez?
 5. Quais obrigações de PLD/FT e LGPD ficam com o gestor do ecossistema, considerando que o KYC da entrada é feito pelo provedor de liquidez?
 
 ## 6. Arquitetura
@@ -166,7 +166,7 @@ flowchart TB
     PROC --> MS --> SC
     PROC <--> DB
     SC --> EX
-    SC -->|M+| C
+    SC -->|Mum+| C
 ```
 
 | Módulo | Responsabilidade |
@@ -191,7 +191,7 @@ sequenceDiagram
     participant Dash as Dashboard
     participant API as Backend Mumbuca+
     participant OZAV as OZAV (liquidez)
-    participant SC as Contrato M+ (Polygon)
+    participant SC as Contrato Mum+ (Polygon)
 
     Cidada->>Dash: Recarregar R$ 50
     Dash->>API: POST /api/payments
@@ -204,10 +204,10 @@ sequenceDiagram
     API->>OZAV: GET /transfers/{id}
     OZAV-->>API: BRL recebido = R$ 50,00
     API->>API: valida valor, referência e carteira
-    API->>SC: mint(carteira, 50 M+, paymentRef)
+    API->>SC: mint(carteira, 50 Mum+, paymentRef)
     SC-->>API: tx hash + confirmação
     API-->>Dash: Emitido ✓ + link PolygonScan
-    SC-->>Cidada: 50 M+ na MetaMask
+    SC-->>Cidada: 50 Mum+ na MetaMask
 ```
 
 ### Máquina de estados de cada pagamento
@@ -247,23 +247,23 @@ Falhas temporárias, como instabilidade de rede, timeout ou provedor fora do ar,
 - Toda a URL pública fica atrás de login. Desconhecidos não criam recargas nem disparam emissões.
 - Na demonstração não há nenhum dado real de beneficiário nem do CadÚnico.
 
-## 9. O token Mumbuca+ (M+)
+## 9. O token Mumbuca+ (Mum+)
 
 | Propriedade | Valor |
 |---|---|
 | Natureza | Utility token do ecossistema da moeda social de Maricá (ver seção 5) |
 | Padrão | ERC-20 (OpenZeppelin v5) |
-| Nome / símbolo | Mumbuca+ / M+ |
+| Nome / símbolo | Mumbuca+ / Mum+ |
 | Decimais | 18 |
 | Supply inicial | 0. Tudo é emitido contra pagamento confirmado |
-| Teto de supply | 10.000.000 M+ |
-| Limite por emissão | 20.000 M+ (ajustável pelo administrador) |
+| Teto de supply | 10.000.000 Mum+ |
+| Limite por emissão | 20.000 Mum+ (ajustável pelo administrador) |
 | Papéis | Administrador (gestor), Emissor (backend), Pausador (gestor) |
 | Pausa | Suspende só novas emissões. Os saldos e as transferências continuam |
 | Rastreabilidade | Evento `MintedForPayment(carteira, valor, paymentRef)` em cada emissão |
 | Rede | Polygon Amoy (chain ID 80002). O contrato é implantado e verificado pelo Remix |
 
-**Paridade experimental:** 1 M+ = R$ 1,00, só nesta demonstração. Na prova de conceito não há resgate nem conversibilidade garantida.
+**Paridade experimental:** 1 Mum+ = R$ 1,00, só nesta demonstração. Na prova de conceito não há resgate nem conversibilidade garantida.
 
 ## 10. Como isso fortalece a política pública
 
@@ -274,7 +274,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou provedor fora do ar,
 | Integração com instituições de pagamento | Provedores plugáveis: Pix hoje, outros amanhã |
 | Inclusão financeira | Funciona com Pix e carteira digital, sem conta bancária tradicional |
 | Sustentabilidade operacional | Menos atendimento manual e logística física. Base para receitas próprias, como recargas e parcerias |
-| Economia local | O M+ é a camada onde entram as regras de território e incentivo (5% no comércio local e crédito externo controlado, módulos futuros do relatório) |
+| Economia local | O Mum+ é a camada onde entram as regras de território e incentivo (5% no comércio local e crédito externo controlado, módulos futuros do relatório) |
 | Transparência e controle | Painel de gestão e explorador público para órgãos de controle |
 
 ## 11. Escopo da prova de conceito
@@ -293,7 +293,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou provedor fora do ar,
 - Maquininhas próprias.
 - Assistente de IA.
 - Integração real com o Mercado Pago.
-- Resgate de M+ em reais.
+- Resgate de Mum+ em reais.
 - Rede principal (mainnet).
 - Integração com o CadÚnico.
 

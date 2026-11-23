@@ -6,12 +6,12 @@ Data: 2026-11-23 · Status: rascunho para aprovação · Prazo: 3 dias até a ap
 
 Prova de conceito técnica para a apresentação presencial (PPT + site aberto ao vivo) da proposta acadêmica **Mumbuca+** (relatório "Renda Básica de Cidadania — Mumbuca", Faculdade Sebrae, 2026). O relatório propõe modernizar a moeda social de Maricá (carteira dupla, POS próprio, IA, paperless); a única menção a tokenização é a "carteira dupla tokenizada". O MVP prova a **fundação** sob esses módulos: dinheiro real que entra por uma instituição de pagamento vira saldo digital rastreável e auditável, sem emissão duplicada.
 
-História contada: **uma cidadã faz uma recarga em BRL via Pix; quando o provedor (OZAV) confirma a chegada do BRL, o sistema emite automaticamente Mumbuca+ (1 M+ = R$ 1,00) na carteira MetaMask dela, com hash verificável na PolygonScan Amoy.**
+História contada: **uma cidadã faz uma recarga em BRL via Pix; quando o provedor (OZAV) confirma a chegada do BRL, o sistema emite automaticamente Mumbuca+ (1 Mum+ = R$ 1,00) na carteira MetaMask dela, com hash verificável na PolygonScan Amoy.**
 
 ## 2. Objetivos, não-objetivos, anti-objetivos
 
 **Objetivos**
-- Token ERC-20 "Mumbuca+" (M+) implantado na Polygon Amoy (chain 80002) via Remix.
+- Token ERC-20 "Mumbuca+" (Mum+) implantado na Polygon Amoy (chain 80002) via Remix.
 - Backend que detecta a chegada de BRL na OZAV, valida consultando a API da OZAV e executa `mint` automaticamente.
 - Quantidade emitida = valor BRL efetivamente recebido (1:1), sem duplicidade mesmo com reenvios, timeouts de RPC ou reinícios.
 - Dashboard com aparência de produto real: visão da cidadã (saldo, recarga, histórico) e visão do operador (todos os pagamentos, estados, hashes, simulação).
@@ -20,7 +20,7 @@ História contada: **uma cidadã faz uma recarga em BRL via Pix; quando o proved
 **Não-objetivos**
 - Conversão BRL→BRS ou qualquer lógica de BRS/Solana (BRS é do lado Peragus/OZAV; o Mumbuca+ só observa a chegada do BRL).
 - Integração real com Mercado Pago (apenas o adaptador desenhado, sem chamadas — ver §6.3).
-- KYC/onboarding por pagador, resgate/conversibilidade de M+ em reais, mainnet, carteira dupla, crédito externo, POS, IA.
+- KYC/onboarding por pagador, resgate/conversibilidade de Mum+ em reais, mainnet, carteira dupla, crédito externo, POS, IA.
 - Dados reais de beneficiários ou CadÚnico.
 
 **Anti-objetivos (falha mesmo que "funcione")**
@@ -51,7 +51,7 @@ História contada: **uma cidadã faz uma recarga em BRL via Pix; quando o proved
 
 ```
  Navegador (React/Vite, servido pelo backend)            MetaMask da cidadã
-   ├─ Visão Cidadã: saldo M+, Recarregar, histórico              ▲
+   ├─ Visão Cidadã: saldo Mum+, Recarregar, histórico              ▲
    └─ Visão Operador: pagamentos, estados, hashes, simular       │ Transfer/Minted
             │ HTTPS (sessão por login)                           │
             ▼                                                    │
@@ -75,15 +75,15 @@ Um único serviço (API + processador + arquivos estáticos do frontend) e um Po
 ### 5.1 Smart contract `MumbucaPlus.sol`
 
 OpenZeppelin Contracts v5:
-- `ERC20("Mumbuca+", "M+")`, 18 decimais, supply inicial zero.
-- `ERC20Capped(cap)` — cap definido no construtor (proposta: 10.000.000 M+).
+- `ERC20("Mumbuca+", "Mum+")`, 18 decimais, supply inicial zero.
+- `ERC20Capped(cap)` — cap definido no construtor (proposta: 10.000.000 Mum+).
 - `AccessControl` com papéis: `DEFAULT_ADMIN_ROLE` (MetaMask do dono), `MINTER_ROLE` (carteira operacional do backend), `PAUSER_ROLE` (dono).
 - **Pausa só da emissão**, não das transferências: `mint` tem `whenNotPaused` (OZ `Pausable`); `pause()/unpause()` restritos a `PAUSER_ROLE`.
 - `mint(address to, uint256 amount, bytes32 paymentRef)`:
   - exige `MINTER_ROLE`, não pausado, `to != 0`, `amount > 0`, `amount <= maxMintPerTx`;
   - **dedup on-chain**: `require(!paymentRefUsed[paymentRef])`, marca como usado;
   - emite `MintedForPayment(to, amount, paymentRef)` além do `Transfer` padrão.
-- `maxMintPerTx` ajustável pelo admin (proposta inicial: 20.000 M+) — limita o dano se a chave do minter vazar.
+- `maxMintPerTx` ajustável pelo admin (proposta inicial: 20.000 Mum+) — limita o dano se a chave do minter vazar.
 - `paymentRef = keccak256("<provider>:<providerPaymentId>")`, calculado pelo backend.
 
 Testes do contrato: rodados localmente antes do deploy (ver §9). Deploy, concessão de `MINTER_ROLE` ao backend, mint manual de teste e verificação na PolygonScan Amoy (plugin de verificação do Remix com chave da API Etherscan/PolygonScan) são feitos pelo dono seguindo um tutorial passo a passo entregue junto (`docs/remix-deploy.md`).
@@ -121,7 +121,7 @@ Transições guardadas no banco (update condicional por estado anterior) para qu
 
 ### 5.5 Valor pago × valor emitido
 
-Emite-se o **valor BRL efetivamente recebido** informado pela OZAV na perna de origem: `amounts.source` (moeda BRL) da transferência consultada, isto é, o valor pago no Pix **antes** de qualquer taxa/conversão (*decisão minha*: a taxa da OZAV incide sobre o lado BRS, que está fora do escopo; um Pix de R$ 11 emite 11 M+). O mínimo do ambiente é comparado com esse mesmo valor. Se diferir do valor solicitado: emite o recebido e registra a divergência visível ao operador (não bloqueia). Se o recebido estiver abaixo do mínimo do ambiente → FAILED (`amount_below_minimum`). Taxas do provedor ficam registradas apenas para transparência.
+Emite-se o **valor BRL efetivamente recebido** informado pela OZAV na perna de origem: `amounts.source` (moeda BRL) da transferência consultada, isto é, o valor pago no Pix **antes** de qualquer taxa/conversão (*decisão minha*: a taxa da OZAV incide sobre o lado BRS, que está fora do escopo; um Pix de R$ 11 emite 11 Mum+). O mínimo do ambiente é comparado com esse mesmo valor. Se diferir do valor solicitado: emite o recebido e registra a divergência visível ao operador (não bloqueia). Se o recebido estiver abaixo do mínimo do ambiente → FAILED (`amount_below_minimum`). Taxas do provedor ficam registradas apenas para transparência.
 
 ## 6. Provedores
 
@@ -160,19 +160,19 @@ Login único de demonstração (senha em variável de ambiente, sessão por cook
 ```
  Mumbuca+                                     [maria.demo ▾]
  ┌────────────────────────────────────────────────────────┐
- │ Saldo  1.011,00 M+          0x8f3…a21c  [copiar]       │
+ │ Saldo  1.011,00 Mum+          0x8f3…a21c  [copiar]       │
  │ [ Recarregar ]                                         │
  ├────────────────────────────────────────────────────────┤
  │ Histórico                                              │
- │ 23/11 14:02  R$ 11,00  → 11 M+   Emitido  ver na rede ↗│
- │ 23/11 13:40  R$ 1.000  → 1.000 M+ Emitido ver na rede ↗│
+ │ 23/11 14:02  R$ 11,00  → 11 Mum+   Emitido  ver na rede ↗│
+ │ 23/11 13:40  R$ 1.000  → 1.000 Mum+ Emitido ver na rede ↗│
  └────────────────────────────────────────────────────────┘
  Recarregar: valor (mín. do ambiente) → QR Pix + copia-e-cola
  → status ao vivo: Aguardando Pix → Pagamento confirmado → Emitindo → Emitido ✓
 ```
 Saldo lido do contrato (`balanceOf`) pelo backend.
 
-**Visão Operador**: tabela de todos os pagamentos — usuário, carteira, origem (`OZAV live` / `OZAV sandbox` / `SIMULADO`), valor solicitado, valor recebido, M+ emitidos, estado, hash com link `https://amoy.polygonscan.com/tx/<hash>`, motivo de falha, divergências; botões "Simular pagamento" (sandbox/simulado) e "Reprocessar" (pagamentos travados); cadastro de usuários de demo (handle fictício + endereço Polygon); saldo de POL da carteira emissora (alerta se baixo).
+**Visão Operador**: tabela de todos os pagamentos — usuário, carteira, origem (`OZAV live` / `OZAV sandbox` / `SIMULADO`), valor solicitado, valor recebido, Mum+ emitidos, estado, hash com link `https://amoy.polygonscan.com/tx/<hash>`, motivo de falha, divergências; botões "Simular pagamento" (sandbox/simulado) e "Reprocessar" (pagamentos travados); cadastro de usuários de demo (handle fictício + endereço Polygon); saldo de POL da carteira emissora (alerta se baixo).
 
 Atualização por polling curto (~2 s) na tela de recarga em andamento.
 
@@ -194,7 +194,7 @@ Atualização por polling curto (~2 s) na tela de recarga em andamento.
 ## 10. Plano de demonstração e contingência
 
 1. Login → visão cidadã com saldo atual.
-2. **Caminho garantido**: recarga OZAV sandbox (R$ 1.000) → operador clica "Simular pagamento" → estados avançam → M+ aparecem na MetaMask → abrir PolygonScan.
+2. **Caminho garantido**: recarga OZAV sandbox (R$ 1.000) → operador clica "Simular pagamento" → estados avançam → Mum+ aparecem na MetaMask → abrir PolygonScan.
 3. **Ponto alto** (se o ensaio live passar): recarga de R$ 11 → pagar o Pix real pelo celular → emissão automática.
 4. Mostrar idempotência: reenviar o mesmo evento / clicar "Reprocessar" → nada é emitido de novo.
 5. Contingência: OZAV fora → `SIMULADO`; sem internet → vídeo gravado do fluxo completo no PPT.

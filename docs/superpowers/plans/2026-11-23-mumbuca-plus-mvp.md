@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Quando a OZAV confirma a chegada de BRL de uma recarga Pix, o backend emite automaticamente Mumbuca+ (1 M+ = R$ 1,00) na carteira Polygon Amoy do usuário, sem emissão duplicada, com dashboard de cidadã e de operador.
+**Goal:** Quando a OZAV confirma a chegada de BRL de uma recarga Pix, o backend emite automaticamente Mumbuca+ (1 Mum+ = R$ 1,00) na carteira Polygon Amoy do usuário, sem emissão duplicada, com dashboard de cidadã e de operador.
 
 **Architecture:** Um repositório com três pacotes npm (workspaces): `contracts/` (Solidity + Hardhat só para testes locais; deploy manual no Remix), `backend/` (Fastify + Postgres, processador in-process com máquina de estados e reconciler) e `frontend/` (React + Vite, servido como estático pelo backend). Provedores de pagamento atrás da interface `PaymentProvider`; a emissão passa por `TokenGateway` (viem) e é idempotente em três camadas (banco, checagem on-chain antes de reenviar, `paymentRefUsed` no contrato).
 
@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - Rede: Polygon Amoy, chain ID `80002`; explorer `https://amoy.polygonscan.com/tx/<hash>`.
-- Token: nome `Mumbuca+`, símbolo `M+`, 18 decimais, supply inicial 0, cap `10_000_000 * 10**18`, `maxMintPerTx` inicial `20_000 * 10**18`.
-- 1 M+ = R$ 1,00; dinheiro sempre em **centavos inteiros**; `amountWei = BigInt(cents) * 10n ** 16n`. Nunca usar `number` em ponto flutuante para valores.
+- Token: nome `Mumbuca+`, símbolo `Mum+`, 18 decimais, supply inicial 0, cap `10_000_000 * 10**18`, `maxMintPerTx` inicial `20_000 * 10**18`.
+- 1 Mum+ = R$ 1,00; dinheiro sempre em **centavos inteiros**; `amountWei = BigInt(cents) * 10n ** 16n`. Nunca usar `number` em ponto flutuante para valores.
 - `paymentRef = keccak256(utf8("<provider>:<providerPaymentId>"))` (bytes32 hex).
 - Estados de pagamento: `AWAITING_PAYMENT | RECEIVED | VALIDATING | APPROVED | MINT_PENDING | MINTED | FAILED`.
 - Mínimo/máximo de recarga: OZAV usa `MIN_RECHARGE_CENTS`/`MAX_RECHARGE_CENTS` do ambiente (live: `1100`/`2000000`; sandbox: `100000`/`1000000`); `simulated` usa `1100`/`2000000`.
@@ -106,7 +106,7 @@ MumbucaPlus/
 - [ ] **Step 1: Scaffold** — raiz com npm workspaces (`contracts`, `backend`, `frontend`), `.gitignore` (node_modules, dist, .env, artifacts, cache, typechain-types), `.nvmrc` = `22`. `contracts/` com `hardhat@^2.22`, `@nomicfoundation/hardhat-toolbox@^5`, `@openzeppelin/contracts@^5.1.0`; `hardhat.config.ts` com solidity `0.8.24`, optimizer ligado (200). Nenhuma rede remota configurada (deploy é no Remix).
 
 - [ ] **Step 2: Write the failing tests** em `contracts/test/MumbucaPlus.test.ts` (deploy com `admin`, `cap = 10_000_000e18`, `maxMintPerTx = 20_000e18`; `minter` recebe `MINTER_ROLE` no `beforeEach`):
-  - `has name Mumbuca+, symbol M+, 18 decimals, zero supply`
+  - `has name Mumbuca+, symbol Mum+, 18 decimals, zero supply`
   - `minter mints amount to wallet and emits Transfer and MintedForPayment(to, amount, ref)` — `balanceOf(user) == 100e18`
   - `reverts PaymentRefAlreadyUsed on second mint with same ref` — e `paymentRefUsed(ref) == true` após o primeiro
   - `reverts AccessControlUnauthorizedAccount when non-minter mints`
@@ -142,7 +142,7 @@ MumbucaPlus/
   4. Deploy com "Injected Provider – MetaMask": `admin` = sua conta principal, `cap_` = `10000000000000000000000000`, `maxMintPerTx_` = `20000000000000000000000`.
   5. `grantRole(MINTER_ROLE(), <conta minter>)`.
   6. Teste manual: com a conta principal, `grantRole(MINTER_ROLE, <sua conta>)` temporariamente, `mint(<sua conta>, 1000000000000000000, 0x…01)`, ver saldo; `revokeRole` em seguida. Repetir o mesmo ref e ver o revert `PaymentRefAlreadyUsed`.
-  7. Importar o token na MetaMask (endereço do contrato, `M+`, 18).
+  7. Importar o token na MetaMask (endereço do contrato, `Mum+`, 18).
   8. Verificar o contrato: plugin "Contract Verification" do Remix com chave da API Etherscan (v2, multichain), rede Amoy; argumentos do construtor iguais aos do passo 4.
   9. Anotar `TOKEN_ADDRESS` e a tx de deploy.
 - [ ] **Step 2: Revisar contra a ABI da Task 1** — todos os nomes de função/papel no tutorial existem no contrato.
@@ -473,11 +473,11 @@ Regras (spec §5.3–5.5):
 - Consumes: contrato HTTP e `PaymentDTO` da Task 9.
 - Produces: build estático em `frontend/dist` servido pelo backend.
 - Layout e textos: esboços da spec §7. Identidade "Mumbuca+", português, sem faixa de "ambiente de teste".
-  - `format.ts`: `formatBRL(cents: string): string` (`"1100"` → `"R$ 11,00"`); `formatMPlus(wei: string): string` (`"11000000000000000000"` → `"11,00 M+"`, sem `Number` para wei); `shortAddress(addr)` (`0x8f3…a21c`); `statusLabel(status)`: `AWAITING_PAYMENT→"Aguardando Pix"`, `RECEIVED|VALIDATING→"Pagamento confirmado"` (VALIDATING mostra "Confirmando pagamento"), `APPROVED|MINT_PENDING→"Emitindo"`, `MINTED→"Emitido"`, `FAILED→"Falhou"`.
+  - `format.ts`: `formatBRL(cents: string): string` (`"1100"` → `"R$ 11,00"`); `formatMPlus(wei: string): string` (`"11000000000000000000"` → `"11,00 Mum+"`, sem `Number` para wei); `shortAddress(addr)` (`0x8f3…a21c`); `statusLabel(status)`: `AWAITING_PAYMENT→"Aguardando Pix"`, `RECEIVED|VALIDATING→"Pagamento confirmado"` (VALIDATING mostra "Confirmando pagamento"), `APPROVED|MINT_PENDING→"Emitindo"`, `MINTED→"Emitido"`, `FAILED→"Falhou"`.
   - Cidadã: seletor de usuário, saldo (`/balance`), endereço com copiar, botão "Recarregar" → `RechargeDialog` (valor em reais, valida mín/máx retornado no 422, mostra QR `qrcode.react` + copia-e-cola do `pixBrCode`, faz polling de `GET /api/payments/:id` a cada 2 s até `MINTED|FAILED` mostrando a linha do tempo de status), histórico com link "ver na rede ↗" (`explorerUrl`).
-  - Operador: tabela de todos os pagamentos com origem (badge `SIMULADO` destacado), valores solicitado/recebido, M+ emitidos, estado, hash/link, `failureReason`/`lastError`, ícone para `amountMismatch`/`needsReview`; botões "Simular pagamento" (visível quando origem é `OZAV sandbox` ou `SIMULADO` e status `AWAITING_PAYMENT`) e "Reprocessar" (status não terminal); formulário de cadastro de usuário de demonstração; painel `ops/status` com alerta de POL baixo e token pausado; seletor de provedor na recarga do operador (`ozav` | `simulated`).
+  - Operador: tabela de todos os pagamentos com origem (badge `SIMULADO` destacado), valores solicitado/recebido, Mum+ emitidos, estado, hash/link, `failureReason`/`lastError`, ícone para `amountMismatch`/`needsReview`; botões "Simular pagamento" (visível quando origem é `OZAV sandbox` ou `SIMULADO` e status `AWAITING_PAYMENT`) e "Reprocessar" (status não terminal); formulário de cadastro de usuário de demonstração; painel `ops/status` com alerta de POL baixo e token pausado; seletor de provedor na recarga do operador (`ozav` | `simulated`).
 - [ ] **Step 1: Scaffold** Vite React TS; deps `react@19`, `react-dom@19`, `qrcode.react`; dev `vitest`, `@testing-library/react`, `jsdom`.
-- [ ] **Step 2: Write failing tests**: `formatBRL("100000") === "R$ 1.000,00"`; `formatMPlus("11000000000000000000") === "11,00 M+"`; `formatMPlus("1")` não lança; `StatusBadge` renderiza "Emitido" para `MINTED` e "SIMULADO" quando `origin==='SIMULADO'`; `RechargeDialog` com resposta 422 mostra "Valor mínimo R$ 11,00"; com resposta 201 mostra o copia-e-cola e, após o fetch mockado retornar `MINTED`, mostra o link para a PolygonScan.
+- [ ] **Step 2: Write failing tests**: `formatBRL("100000") === "R$ 1.000,00"`; `formatMPlus("11000000000000000000") === "11,00 Mum+"`; `formatMPlus("1")` não lança; `StatusBadge` renderiza "Emitido" para `MINTED` e "SIMULADO" quando `origin==='SIMULADO'`; `RechargeDialog` com resposta 422 mostra "Valor mínimo R$ 11,00"; com resposta 201 mostra o copia-e-cola e, após o fetch mockado retornar `MINTED`, mostra o link para a PolygonScan.
 - [ ] **Step 3: Run** `npm test -w frontend` — Expected: FAIL.
 - [ ] **Step 4: Implement** páginas e componentes.
 - [ ] **Step 5: Run** `npm test -w frontend && npm run build -w frontend` — Expected: PASS e `frontend/dist/index.html` existe.
@@ -499,8 +499,8 @@ Regras (spec §5.3–5.5):
 - [ ] **Step 1: Build de produção local** — `npm ci && npm run build && npm start` com env de sandbox. Expected: `GET /api/session` responde e a SPA abre em `http://localhost:3000`.
 - [ ] **Step 2: Railway (com o dono)** — projeto novo `mumbuca-plus`, serviço apontando para o novo repositório GitHub, plugin Postgres (`DATABASE_URL`, `DATABASE_SSL=true`), todas as variáveis de `.env.example` preenchidas pelo dono no painel (nunca no chat ou no git), build `npm ci && npm run build`, start `npm start`, domínio público gerado. Expected: URL HTTPS abre o login.
 - [ ] **Step 3: Webhook OZAV (se `webhooks:write` disponível)** — registrar `https://<domínio>/webhooks/payments` e pôr o segredo em `OZAV_WEBHOOK_SECRET`. Se não disponível, anotar no runbook que o reconciler cobre.
-- [ ] **Step 4: Ensaio sandbox** — recarga OZAV de R$ 1.000 → Simular → `MINTED`; abrir a tx na PolygonScan; ver 1.000 M+ na MetaMask. Clicar "Reprocessar" e confirmar que nenhuma nova tx aparece. Registrar hash.
+- [ ] **Step 4: Ensaio sandbox** — recarga OZAV de R$ 1.000 → Simular → `MINTED`; abrir a tx na PolygonScan; ver 1.000 Mum+ na MetaMask. Clicar "Reprocessar" e confirmar que nenhuma nova tx aparece. Registrar hash.
 - [ ] **Step 5: Ensaio simulado** — recarga `SIMULADO` de R$ 50 → `MINTED`.
-- [ ] **Step 6: Ensaio live (se o dono fornecer chave live)** — trocar `PROVIDER_ENV=live`, chave/IDs live, `MIN_RECHARGE_CENTS=1100`; recarga de R$ 11 paga pelo dono via Pix → `MINTED` com 11 M+. Se falhar, registrar o motivo e manter sandbox como caminho principal.
+- [ ] **Step 6: Ensaio live (se o dono fornecer chave live)** — trocar `PROVIDER_ENV=live`, chave/IDs live, `MIN_RECHARGE_CENTS=1100`; recarga de R$ 11 paga pelo dono via Pix → `MINTED` com 11 Mum+. Se falhar, registrar o motivo e manter sandbox como caminho principal.
 - [ ] **Step 7: `docs/demo-runbook.md`** — checklist da véspera (POL da minter > `LOW_POL_THRESHOLD_WEI`, `MINTER_ROLE`, token não pausado, chaves do ambiente certo, Railway no ar), roteiro da apresentação (spec §10), contingências (OZAV fora → `SIMULADO`; sem internet → vídeo), como gravar o vídeo de contingência.
 - [ ] **Step 8: Commit** — `docs: add deployment and demo runbook`
