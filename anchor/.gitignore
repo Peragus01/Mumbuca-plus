@@ -3,3 +3,5 @@ test-ledger/
 .anchor/
 node_modules/
 *.keypair.json
+*-keypair.json
+id.json

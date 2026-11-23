@@ -11,9 +11,13 @@ use crate::{
     state::{Config, PaymentReceipt, CONFIG_SEED, MINT_SEED, RECEIPT_SEED},
 };
 
-// Account constraints run in field order, so every check on `config` (signer == minter,
-// !paused, amount > 0, amount <= max_mint_per_tx, total_minted + amount <= cap) runs before
-// the receipt `init` and the recipient ATA `init_if_needed`.
+// Real execution order (Anchor 1.2 `try_accounts` codegen): every `init`/`init_if_needed`
+// field runs first, so the receipt `init` and the recipient ATA `init_if_needed` happen BEFORE
+// the non-init constraints on `config` (signer == minter, !paused, amount > 0,
+// amount <= max_mint_per_tx, total_minted + amount <= cap) and on `mint`. Any failure aborts
+// the whole transaction, so nothing persists, but error precedence follows this order: a
+// reused `payment_ref` reports "account already in use" even if the signer is unauthorized,
+// minting is paused or the amount is invalid.
 #[derive(Accounts)]
 #[instruction(payment_ref: [u8; 32], amount: u64)]
 pub struct MintForPayment<'info> {

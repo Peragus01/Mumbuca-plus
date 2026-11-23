@@ -320,6 +320,27 @@ fn same_payment_ref_fails_second_time() {
     assert_eq!(env.config().total_minted, 1100);
 }
 
+/// Pins Anchor 1.2 precedence: `init`/`init_if_needed` accounts are created before the
+/// non-init constraints on `config` run, so a reused `payment_ref` reports "already in use"
+/// even when minting is paused (the whole transaction is rolled back either way).
+#[test]
+fn reused_payment_ref_reports_already_in_use_before_paused() {
+    let mut env = Env::new();
+    env.mint(pref(19), 1100).expect("first mint");
+    let pauser = env.pauser.insecure_clone();
+    env.pause(&pauser).expect("pause");
+
+    let err = env.mint(pref(19), 1100).expect_err("reused payment_ref must fail");
+    let logs = err.meta.logs.join("\n");
+    assert!(logs.contains("already in use"), "expected account-already-in-use, logs:\n{logs}");
+    let dbg = format!("{:?}", err.err);
+    assert!(
+        !dbg.contains(&format!("Custom({})", err_code(MumbucaError::Paused))),
+        "expected the receipt init failure, not Paused: {dbg}"
+    );
+    assert_eq!(env.balance(&env.citizen.pubkey()), 1100);
+}
+
 #[test]
 fn non_minter_gets_unauthorized() {
     let mut env = Env::new();
