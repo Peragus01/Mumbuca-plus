@@ -69,7 +69,10 @@ cd ~/MumbucaPlus        # ou: cd /mnt/c/Users/ferna/OneDrive/Desktop/MumbucaPlus
 npm install
 export SOLANA_RPC_URL=https://api.devnet.solana.com
 export PROGRAM_ID=HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm   # o valor anotado no passo 4
-npm run init:program -w backend -- \n  --admin-keypair ~/.config/solana/id.json \n  --minter <MINTER_PUBKEY> \n  --pauser $(solana address)
+npm run init:program -w backend -- \
+  --admin-keypair ~/.config/solana/id.json \
+  --minter <MINTER_PUBKEY> \
+  --pauser $(solana address)
 ```
 
 Parâmetros fixos: `cap` = `1000000000` e `max_mint_per_tx` = `2000000` (unidades do token, 2 decimais: `100` = 1 Mum+). O script imprime as PDAs `config` e `mint`, `config.admin`, `config.minter`, `config.pauser` e os links do explorer, e nunca imprime chaves privadas.
