@@ -19,9 +19,11 @@ solana config set --url devnet
 
 ```bash
 solana address            # pubkey da keypair CLI do dono: é o admin e o pauser
-solana airdrop 2          # se falhar (limite), use o faucet oficial: https://faucet.solana.com
+solana airdrop 2          # repita até ter ~5 SOL; se falhar (limite), use o faucet oficial: https://faucet.solana.com
 solana balance
 ```
+
+O deploy do programa custa bem mais que 2 SOL na devnet (o rent do programa depende do tamanho do `.so`). Tenha cerca de **5 SOL** na carteira do dono antes do passo 4, e mais **1 SOL** para o minter (passo 3). Se o deploy falhar por saldo, peça mais SOL e rode `anchor deploy` de novo.
 
 ## 3. Keypair do minter (fora do repositório)
 
@@ -60,15 +62,14 @@ anchor deploy --provider.cluster devnet
 
 Rode este passo **logo depois** do `anchor deploy`. A instrução `initialize` usa uma PDA de config fixa e qualquer pessoa pode chamá-la antes de você: quem chamar primeiro define admin, minter e pauser.
 
-No Windows ou WSL, na raiz do repositório (precisa de Node 22+ e `npm install` feito):
+Rode **dentro do WSL**, onde existem o `solana` e a keypair `~/.config/solana/id.json`. Use a cópia do repositório no WSL (por exemplo `~/MumbucaPlus`, ou o caminho `/mnt/c/Users/ferna/OneDrive/Desktop/MumbucaPlus`) e instale as dependências **no WSL** (Node 22+ no WSL):
 
 ```bash
+cd ~/MumbucaPlus        # ou: cd /mnt/c/Users/ferna/OneDrive/Desktop/MumbucaPlus
+npm install
 export SOLANA_RPC_URL=https://api.devnet.solana.com
 export PROGRAM_ID=HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm   # o valor anotado no passo 4
-npm run init:program -w backend -- \
-  --admin-keypair ~/.config/solana/id.json \
-  --minter <MINTER_PUBKEY> \
-  --pauser $(solana address)
+npm run init:program -w backend -- \n  --admin-keypair ~/.config/solana/id.json \n  --minter <MINTER_PUBKEY> \n  --pauser $(solana address)
 ```
 
 Parâmetros fixos: `cap` = `1000000000` e `max_mint_per_tx` = `2000000` (unidades do token, 2 decimais: `100` = 1 Mum+). O script imprime as PDAs `config` e `mint`, `config.admin`, `config.minter`, `config.pauser` e os links do explorer, e nunca imprime chaves privadas.
@@ -80,13 +81,13 @@ npm run init:program -w backend -- --verify \
   --admin-keypair ~/.config/solana/id.json --minter <MINTER_PUBKEY> --pauser $(solana address)
 ```
 
-Deve terminar com `OK: config.admin/minter/pauser match the expected values.`. Se `admin` ou `minter` forem outros, alguém inicializou antes de você: **faça um novo deploy com um novo program id** (gere outra keypair do programa, `anchor keys sync`, `anchor build`, `anchor deploy`) e repita este passo.
+Deve terminar com `OK: config.admin/minter/pauser match the expected values.`. Se o `initialize` falhar com a mensagem "initialize falhou" (programa já inicializado), o script também confere a config existente e avisa. Se `admin` ou `minter` forem outros, alguém inicializou antes de você: **faça um novo deploy com um novo program id** (gere outra keypair do programa, `anchor keys sync`, `anchor build`, `anchor deploy`) e repita este passo.
 
 **URI dos metadados do token.** O `uri` é fixado no `initialize` e não existe instrução para alterá-lo. Por padrão é vazio. Para definir, use `--uri <url>` na primeira (e única) chamada.
 
 ## 6. Teste manual de emissão
 
-Depois que a Task 15 existir, com `MINTER_SECRET_KEY`, `SOLANA_RPC_URL` e `PROGRAM_ID` no `.env`:
+**Não rode `smoke:mint` agora**: hoje ele ainda é o script da versão EVM. Ele só passa a ser a versão Solana depois da Task 15. Quando a Task 15 existir, com `MINTER_SECRET_KEY`, `SOLANA_RPC_URL` e `PROGRAM_ID` no `.env`:
 
 1. Emita 1 Mum+ (`100` unidades) para a Phantom do dono com `npm run smoke:mint -w backend`.
 2. Na Phantom (rede devnet), veja o token chegar. Abra a transação no Solana Explorer (cluster devnet).

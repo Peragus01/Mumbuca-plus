@@ -109,3 +109,11 @@ export function decodeConfigAccount(data: Uint8Array): ConfigAccount {
   const paused = b[o] === 1;
   return { admin, minter, pauser, mint, cap, maxMintPerTx, totalMinted, paused };
 }
+
+/** True when the on-chain config has exactly the expected admin/minter/pauser (front-run check). */
+export function configMatches(
+  cfg: Pick<ConfigAccount, 'admin' | 'minter' | 'pauser'>,
+  expected: Pick<ConfigAccount, 'admin' | 'minter' | 'pauser'>,
+): boolean {
+  return cfg.admin.equals(expected.admin) && cfg.minter.equals(expected.minter) && cfg.pauser.equals(expected.pauser);
+}

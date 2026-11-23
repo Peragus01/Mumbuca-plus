@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import {
   buildInitializeInstruction,
+  configMatches,
   decodeConfigAccount,
   encodeInitializeData,
   findConfigPda,
@@ -76,5 +77,13 @@ describe('program-client', () => {
     expect(c.admin.equals(a) && c.minter.equals(m) && c.pauser.equals(p) && c.mint.equals(mint)).toBe(true);
     expect([c.cap, c.maxMintPerTx, c.totalMinted, c.paused]).toEqual([10n, 20n, 30n, true]);
     expect(() => decodeConfigAccount(Buffer.alloc(200))).toThrow();
+  });
+
+  it('configMatches detects a foreign admin/minter/pauser', () => {
+    const [a, m, p, x] = [1, 2, 3, 4].map(() => Keypair.generate().publicKey);
+    expect(configMatches({ admin: a, minter: m, pauser: p }, { admin: a, minter: m, pauser: p })).toBe(true);
+    expect(configMatches({ admin: x, minter: m, pauser: p }, { admin: a, minter: m, pauser: p })).toBe(false);
+    expect(configMatches({ admin: a, minter: x, pauser: p }, { admin: a, minter: m, pauser: p })).toBe(false);
+    expect(configMatches({ admin: a, minter: m, pauser: x }, { admin: a, minter: m, pauser: p })).toBe(false);
   });
 });
