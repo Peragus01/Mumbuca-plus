@@ -2,7 +2,7 @@
   "name": "mumbuca-plus",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["contracts"],
+  "workspaces": ["contracts", "backend"],
   "scripts": {
     "test": "npm test --workspaces --if-present"
   }
