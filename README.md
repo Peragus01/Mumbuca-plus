@@ -4,7 +4,7 @@
 
 **Infraestrutura de tokenização para moedas sociais: um pagamento em reais, liquidado por um parceiro regulado, vira automaticamente saldo digital rastreável na carteira do cidadão, com entrega condicionada ao pagamento (DvP) e compliance desde o desenho.**
 
-> Prova de conceito da proposta **Mumbuca+**, desenvolvida a partir do relatório *"Renda Básica de Cidadania — Mumbuca"* (Faculdade Sebrae, Administração de Empresas, Turma T9, disciplina Empreendedorismo & Impacto Social, 2026). Não é um sistema oficial da Prefeitura de Maricá nem do Banco Comunitário Mumbuca. Roda na rede de testes **Polygon Amoy**.
+> Prova de conceito da proposta **Mumbuca+**, desenvolvida a partir do relatório *"Renda Básica de Cidadania — Mumbuca"* (Faculdade Sebrae, Administração de Empresas, Turma T9, disciplina Empreendedorismo & Impacto Social, 2026). Não é um sistema oficial da Prefeitura de Maricá nem do Banco Comunitário Mumbuca. Roda na **Solana devnet**.
 
 ---
 
@@ -37,8 +37,8 @@ O relatório aponta gargalos que a tecnologia pode atacar:
 | Gargalo (relatório) | Como a tokenização ajuda |
 |---|---|
 | Processos físicos: cartões plásticos e papel térmico | Saldo e comprovante 100% digitais, verificáveis on-chain |
-| Rastreabilidade e prestação de contas manuais | Cada emissão tem um hash público, auditável por qualquer pessoa |
-| Arranjo fechado, difícil de integrar | Padrão aberto (ERC-20), integrável a carteiras e instituições de pagamento |
+| Rastreabilidade e prestação de contas manuais | Cada emissão tem uma assinatura pública, auditável por qualquer pessoa |
+| Arranjo fechado, difícil de integrar | Padrão aberto (SPL Token-2022), integrável a carteiras e instituições de pagamento |
 | Dependência fiscal exclusiva de repasses públicos | Entrada de recursos por instituições de pagamento abre caminho a recargas e parcerias |
 
 O relatório propõe uma **carteira dupla tokenizada**. Este repositório constrói a **fundação técnica** dessa carteira: a ponte automática, auditável e em conformidade entre o dinheiro que entra pelo sistema de pagamentos e o token que chega ao cidadão.
@@ -48,9 +48,9 @@ O relatório propõe uma **carteira dupla tokenizada**. Este repositório constr
 1. A cidadã escolhe um valor e faz uma **recarga via Pix**.
 2. O **parceiro de liquidez** recebe os reais, já com KYC, KYB e KYT aplicados na entrada.
 3. O backend do Mumbuca+ **detecta a liquidação** por webhook assinado ou por consulta periódica e **confirma direto na API do parceiro**. Uma notificação sozinha nunca dispara emissão.
-4. Com o pagamento liquidado, o backend executa `mint()` no contrato inteligente: **entrega contra pagamento (DvP)**.
-5. Os **Mumbuca+ (Mum+) aparecem na carteira MetaMask** da cidadã, 1 Mum+ para cada R$ 1,00 liquidado.
-6. A transação fica **pública e verificável** na PolygonScan.
+4. Com o pagamento liquidado, o backend executa `mint_for_payment` no programa Solana: **entrega contra pagamento (DvP)**.
+5. Os **Mumbuca+ (Mum+) aparecem na carteira Phantom** da cidadã, 1 Mum+ para cada R$ 1,00 liquidado.
+6. A transação fica **pública e verificável** no Solana Explorer.
 7. Nenhum pagamento gera emissão duplicada, mesmo com reenvios, quedas de rede ou reinícios do servidor.
 
 ## 3. A rota do dinheiro: BRL → BRS → Mumbuca+
@@ -60,15 +60,15 @@ flowchart LR
     A["Cidadã<br/>paga R$ via Pix"] -->|BRL| B["Parceiro de liquidez<br/>KYC · KYB · KYT"]
     B -->|"BRL → BRS<br/>(real tokenizado, Solana)<br/>sem perna de câmbio"| C[("Reserva em BRS<br/>custódia segregada")]
     B -.->|"evento: BRL liquidado"| D["Backend Mumbuca+<br/>valida na API do parceiro"]
-    D -->|"DvP: mint 1:1"| E["Contrato Mumbuca+<br/>Polygon"]
-    E -->|"Mum+"| F["Carteira da cidadã<br/>MetaMask"]
+    D -->|"DvP: mint 1:1"| E["Programa Mumbuca+<br/>Solana"]
+    E -->|"Mum+"| F["Carteira da cidadã<br/>Phantom"]
 ```
 
 - **BRL:** o cidadão paga em reais, pelo Pix, a moeda que ele já usa.
 - **BRS:** o parceiro de liquidez converte os reais em **BRS**, um token referenciado no real que roda na Solana. A conversão BRL→BRS **não tem perna de câmbio**: não há cotação contra moeda estrangeira nem trava de câmbio, e a taxa é 1:1 no mesmo padrão monetário. O BRS fica em **custódia segregada** e forma a **reserva em reais** que lastreia a emissão.
 - **Mumbuca+:** com a liquidação do BRL confirmada, o sistema emite **Mum+ na mesma quantidade em reais** na carteira do cidadão. O Mum+ é a camada de **moeda social**: é nela que entram as regras da política pública, como território, incentivo ao comércio local e crédito controlado.
 
-Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim Mum+ (moeda social com paridade com o real). **Nenhuma perna envolve moeda estrangeira.**
+Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim Mum+ (moeda social com paridade com o real). **Nenhuma perna envolve moeda estrangeira.** E a rota inteira roda numa única rede: o BRS e o Mum+ estão ambos na Solana.
 
 > **Ambientes:** a mesma rota BRL → BRS → Mumbuca+ roda no ambiente de testes do parceiro (Pix simulado) e no ambiente real (Pix de verdade, mínimo de R$ 11). O ativo de reserva (BRS) é definido por uma única variável de ambiente.
 
@@ -124,7 +124,7 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 - **DvP (Delivery versus Payment):** o Mum+ só é entregue contra liquidação confirmada em reais. Não existe pré-emissão, pré-venda ou oferta pública: o supply nasce exclusivamente de pagamentos liquidados e validados na fonte.
 - **Paridade fixa e sem formação de preço:** não há livro de ofertas, cotação nem negociação promovida pelo sistema.
 - **Governança on-chain do gestor:** os papéis de administrador e pausador ficam com o gestor do ecossistema, que pode suspender emissões e ajustar limites.
-- **Utilidade especificada no código:** o próximo passo é restringir no contrato as transferências a carteiras credenciadas (lojistas e beneficiários da rede). Isso materializa on-chain a "utilidade especificada" do art. 3º, III.
+- **Utilidade especificada no código:** o próximo passo é restringir as transferências do Mum+ a carteiras credenciadas (lojistas e beneficiários da rede) com um *transfer hook* do Token-2022. Isso materializa on-chain a "utilidade especificada" do art. 3º, III.
 
 ### 5.4 Objeções antecipadas
 
@@ -137,10 +137,10 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 | Conceito | Como aparece no Mumbuca+ |
 |---|---|
 | **DvP (Delivery versus Payment)** | O ativo (Mum+) só é entregue depois da liquidação do pagamento (BRL), eliminando o risco de principal: ninguém recebe token sem ter pago |
-| **Finalidade de liquidação** | O BRL é considerado liquidado só pelo status oficial do parceiro, e o Mum+ só é considerado entregue após confirmação do bloco |
+| **Finalidade de liquidação** | O BRL é considerado liquidado só pelo status oficial do parceiro, e o Mum+ só é considerado entregue após a confirmação da transação na rede (commitment `confirmed`) |
 | **Lastro 1:1 e reserva segregada** | Cada Mum+ corresponde a R$ 1,00 recebido, mantido como BRS em custódia segregada do parceiro |
 | **Fonte da verdade (*golden source*)** | A API do parceiro é a fonte oficial do pagamento. O webhook só avisa e nunca decide |
-| **Idempotência e exactly-once** | Cada pagamento gera no máximo uma emissão, garantida por banco de dados e contrato (`paymentRef` único) |
+| **Idempotência e exactly-once** | Cada pagamento gera no máximo uma emissão, garantida pelo banco de dados e pelo programa (um recibo on-chain por `paymentRef`) |
 | **Reconciliação contínua** | Um reconciliador compara periodicamente o estado local com o do parceiro e o da blockchain, e retoma o que ficou pendente |
 | **Trilha de auditoria** | Cada transição de estado e cada evento recebido ficam registrados (append-only) com o corpo original |
 | **Máquina de estados de liquidação** | `AWAITING_PAYMENT → RECEIVED → VALIDATING → APPROVED → MINT_PENDING → MINTED` (ou `FAILED`), com transições atômicas |
@@ -150,20 +150,20 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 ## 7. Compliance by design
 
 - **KYC, KYB e KYT na porta de entrada:** todo real que entra passa pelos controles do parceiro de liquidez antes de existir qualquer emissão.
-- **PLD/FT:** a arquitetura respeita a Lei nº 9.613/1998. Origem dos recursos identificada pelo parceiro, rastreabilidade on-chain do destino e trilha de auditoria completa do evento ao hash.
+- **PLD/FT:** a arquitetura respeita a Lei nº 9.613/1998. Origem dos recursos identificada pelo parceiro, rastreabilidade on-chain do destino e trilha de auditoria completa do evento à assinatura on-chain.
 - **Travel Rule (Recomendação 16 do GAFI/FATF):** a vinculação entre pagador, pagamento e carteira de destino fica registrada ponta a ponta.
 - **LGPD (Lei nº 13.709/2018) e minimização de dados:** a camada Mumbuca+ guarda só o necessário (identificador, carteira, valores e eventos). A identificação civil fica com o parceiro regulado. A demonstração usa apenas dados fictícios, sem CadÚnico.
-- **Segregação de funções e menor privilégio:** a conta que administra o contrato é separada da conta que emite. O emissor só tem o papel de emitir, e o administrador e o pausador ficam com o gestor.
+- **Segregação de funções e menor privilégio:** a chave que administra o programa é separada da conta que emite. O emissor só tem o papel de emitir, e o administrador e o pausador ficam com o gestor.
 - **Circuit breaker:** a pausa de emergência suspende novas emissões sem afetar saldos.
 - **Gestão de chaves:** a chave de emissão fica só no servidor, em variável de ambiente, e nunca no navegador nem no repositório.
-- **Transparência para órgãos de controle:** cada emissão tem um hash público verificável no explorador. O painel do operador mostra origem, valores, estado e divergências de cada pagamento.
+- **Transparência para órgãos de controle:** cada emissão tem uma assinatura pública verificável no explorador. O painel do operador mostra origem, valores, estado e divergências de cada pagamento.
 
 ## 8. Arquitetura
 
 ```mermaid
 flowchart TB
     subgraph Usuarios["Usuários"]
-        C["Cidadã<br/>navegador + MetaMask"]
+        C["Cidadã<br/>navegador + Phantom"]
         O["Operador<br/>painel de gestão"]
     end
 
@@ -179,8 +179,8 @@ flowchart TB
     end
 
     LP["Parceiro de liquidez<br/>Pix · KYC · KYB · KYT · custódia"]
-    SC["Contrato Mumbuca+ (ERC-20)<br/>Polygon Amoy"]
-    EX["PolygonScan<br/>verificação pública"]
+    SC["Programa Mumbuca+ (Anchor)<br/>Token-2022 · Solana devnet"]
+    EX["Solana Explorer<br/>verificação pública"]
 
     C --> API
     O --> API
@@ -197,16 +197,16 @@ flowchart TB
 
 | Módulo | Responsabilidade |
 |---|---|
-| Contrato ERC-20 | Emissão controlada, teto de supply, pausa, bloqueio de emissão duplicada |
+| Programa Anchor | Emissão controlada, teto de supply, pausa e recibo on-chain por pagamento (bloqueio de emissão duplicada) |
 | PaymentProvider | Interface única para qualquer instituição de pagamento ou parceiro de liquidez |
 | Webhook Handler | Recebe eventos, verifica a assinatura e registra sem confiar no conteúdo |
 | Validador | Consulta o pagamento na API oficial do parceiro e confere status, valor e referência |
-| Registro de carteiras | Liga cada usuário (fictício na demo) a um endereço Polygon validado (EIP-55) |
+| Registro de carteiras | Liga cada usuário (fictício na demo) a um endereço Solana validado (chave pública base58) |
 | Serviço de emissão | Simula, envia `mint`, acompanha a confirmação e recupera falhas sem duplicar |
 | Banco de transações | Histórico completo e auditável de cada pagamento e transição |
-| Dashboard | Visão da cidadã (saldo, recarga, histórico) e do operador (todos os pagamentos, hashes, ações) |
+| Dashboard | Visão da cidadã (saldo, recarga, histórico) e do operador (todos os pagamentos, assinaturas, ações) |
 
-**Tecnologias:** Solidity e OpenZeppelin v5 (contrato), Remix e MetaMask (implantação), Node.js 22, TypeScript, Fastify e Postgres (backend), viem (blockchain), React e Vite (dashboard), Railway (hospedagem).
+**Tecnologias:** Rust e Anchor 1.2 (programa), SPL Token-2022 com metadata on-chain (token), Solana CLI (implantação), Node.js 22, TypeScript, Fastify e Postgres (backend), `@solana/web3.js` (blockchain), React e Vite (dashboard), Phantom (carteira), Railway (hospedagem).
 
 ## 9. Fluxo ponta a ponta
 
@@ -217,7 +217,7 @@ sequenceDiagram
     participant Dash as Dashboard
     participant API as Backend Mumbuca+
     participant LP as Parceiro de liquidez
-    participant SC as Contrato Mum+ (Polygon)
+    participant SC as Programa Mum+ (Solana)
 
     Cidada->>Dash: Recarregar R$ 50
     Dash->>API: POST /api/payments
@@ -231,10 +231,10 @@ sequenceDiagram
     API->>LP: GET /transfers/{id}
     LP-->>API: BRL liquidado = R$ 50,00
     API->>API: valida valor, referência e carteira
-    API->>SC: DvP: mint(carteira, 50 Mum+, paymentRef)
-    SC-->>API: tx hash + confirmação
-    API-->>Dash: Emitido ✓ + link PolygonScan
-    SC-->>Cidada: 50 Mum+ na MetaMask
+    API->>SC: DvP: mint_for_payment(paymentRef, 50 Mum+)
+    SC-->>API: assinatura + confirmação
+    API-->>Dash: Emitido ✓ + link Solana Explorer
+    SC-->>Cidada: 50 Mum+ na Phantom
 ```
 
 ### Máquina de estados de cada pagamento
@@ -247,7 +247,7 @@ stateDiagram-v2
     VALIDATING --> AWAITING_PAYMENT: ainda não liquidado
     VALIDATING --> APPROVED: BRL liquidado
     VALIDATING --> FAILED: rejeitado / expirado / abaixo do mínimo / carteira inexistente
-    APPROVED --> MINT_PENDING: transação enviada (hash gravado)
+    APPROVED --> MINT_PENDING: transação enviada (assinatura gravada)
     MINT_PENDING --> MINTED: confirmada na blockchain
     MINT_PENDING --> APPROVED: revertida sem emissão
     APPROVED --> FAILED: revert definitivo após várias tentativas
@@ -262,24 +262,30 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 **Zero emissão duplicada, em quatro camadas:**
 1. Cada evento do parceiro é registrado pelo seu identificador e o repetido é descartado.
 2. Cada pagamento muda de estado com atualização condicional e atômica no Postgres, segura contra concorrência entre webhook e reconciliador.
-3. Antes de reenviar uma emissão incerta, o backend consulta o contrato para saber se aquele pagamento já foi emitido e recupera o hash pelo evento on-chain.
-4. **No próprio contrato:** `mint(to, amount, paymentRef)` recusa qualquer `paymentRef` repetido, uma garantia final que não depende do backend.
+3. Antes de reenviar uma emissão incerta, o backend verifica se já existe o recibo on-chain (PDA) daquele pagamento e recupera a assinatura pela primeira transação do recibo. Se a transação expirou sem recibo, o reenvio é seguro.
+4. **No próprio programa:** `mint_for_payment` cria uma conta de recibo (PDA `["receipt", paymentRef]`) por pagamento. Uma segunda emissão com o mesmo `paymentRef` falha na própria rede, uma garantia final que não depende do backend.
 
 **Práticas de engenharia on-chain:**
-- **`paymentRef` determinístico:** `keccak256("<provedor>:<id do pagamento>")` liga cada emissão, de forma única e verificável, ao pagamento que a originou.
-- **Controle de acesso por papéis** (OpenZeppelin `AccessControl`): `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE` e `PAUSER_ROLE`, separados.
-- **Erros customizados** (`PaymentRefAlreadyUsed`, `MintAmountExceedsLimit`, `InvalidMintAmount`): mais baratos em gás e decodificados pelo backend para decidir entre tentar de novo e falhar.
-- **Simulação antes do envio:** cada `mint` é simulado (`eth_call`) antes de ser transmitido. Um revert previsível nunca gasta gás.
-- **Classificação de falhas:** um revert decodificado é definitivo, e erro de rede, timeout ou falta de gás são transitórios. Um revert não identificado é tratado como definitivo, para evitar loop infinito.
-- **Eventos indexados** (`MintedForPayment` com `paymentRef` indexado) para auditoria e recuperação.
-- **Endereços validados com checksum EIP-55** no registro de carteiras.
-- **Contrato verificado** no explorador, com código-fonte público.
-- **Testes:** contrato testado em EVM local (Hardhat) e backend com TDD (vitest), incluindo integração real contra um nó local.
+- **`paymentRef` determinístico:** `keccak256("<provedor>:<id do pagamento>")` liga cada emissão, de forma única e verificável, ao pagamento que a originou. Ele também é a semente da PDA de recibo.
+- **PDAs (Program Derived Addresses):** a configuração, o mint e cada recibo são contas derivadas do programa (`["config"]`, `["mint"]`, `["receipt", paymentRef]`). A autoridade de emissão é a PDA de configuração, então nenhuma chave privada consegue emitir Mum+ fora das regras do programa.
+- **Controle de acesso por papéis** no estado do programa: `admin`, `minter` e `pauser`, separados.
+- **Erros customizados do programa** (`Unauthorized`, `Paused`, `InvalidAmount`, `ExceedsMaxPerTx`, `CapExceeded`): decodificados pelo backend para decidir entre tentar de novo e falhar.
+- **Simulação antes do envio:** cada transação é simulada (`simulateTransaction`) antes de ser transmitida. Uma rejeição previsível nunca chega à rede.
+- **Classificação de falhas e expiração de blockhash:**
+  - erro do programa é definitivo;
+  - erro de rede, timeout ou falta de SOL são transitórios;
+  - se uma transação expira sem recibo on-chain, o reenvio é seguro e comprovado.
+- **Token-2022 com metadata on-chain:** nome e símbolo gravados no próprio mint, sem depender de serviços externos.
+- **Eventos** (`MintedForPayment`) para auditoria e indexação.
+- **Endereços validados** (chaves públicas base58 de 32 bytes) no registro de carteiras.
+- **Testes:**
+  - programa testado em Rust contra o runtime da Solana (SVM);
+  - backend construído com TDD (vitest), incluindo integração real contra um validador local.
 
 **Outras garantias:**
 - **Nada é emitido só porque chegou uma notificação.** O pagamento sempre é confirmado na fonte da verdade.
 - O webhook é autenticado por HMAC-SHA256, com janela de tempo e comparação em tempo constante.
-- O contrato limita o dano de uma eventual chave vazada: teto total, limite por emissão e pausa de emergência.
+- O programa limita o dano de uma eventual chave vazada: teto total, limite por emissão e pausa de emergência.
 - Toda a URL pública fica atrás de login. Desconhecidos não criam recargas nem disparam emissões.
 
 ## 11. O token Mumbuca+ (Mum+)
@@ -287,16 +293,17 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 | Propriedade | Valor |
 |---|---|
 | Natureza | Utility token do ecossistema da moeda social de Maricá (ver seção 5) |
-| Padrão | ERC-20 (OpenZeppelin v5) |
+| Padrão | SPL Token-2022 (extensões MetadataPointer e TokenMetadata) |
 | Nome / símbolo | Mumbuca+ / Mum+ |
-| Decimais | 18 |
+| Decimais | 2. 1 unidade = R$ 0,01, então centavos viram unidades sem conversão |
+| Autoridade de emissão | PDA do programa: nenhuma chave privada emite fora das regras on-chain |
 | Supply inicial | 0. Tudo é emitido contra pagamento liquidado (DvP) |
 | Teto de supply | 10.000.000 Mum+ |
 | Limite por emissão | 20.000 Mum+ (ajustável pelo administrador) |
 | Papéis | Administrador (gestor), Emissor (backend), Pausador (gestor) |
 | Pausa | Suspende só novas emissões. Saldos e transferências continuam |
-| Rastreabilidade | Evento `MintedForPayment(carteira, valor, paymentRef)` em cada emissão |
-| Rede | Polygon Amoy (chain ID 80002), com contrato implantado e verificado pelo Remix |
+| Rastreabilidade | Evento `MintedForPayment` e conta de recibo on-chain por pagamento |
+| Rede | Solana devnet, com o programa Anchor implantado pela Solana/Anchor CLI |
 
 **Paridade:** 1 Mum+ = R$ 1,00.
 
@@ -315,7 +322,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 ## 13. Escopo da prova de conceito
 
 **Está no escopo:**
-- Contrato ERC-20 na Polygon Amoy.
+- Programa Anchor e token Token-2022 na Solana devnet.
 - Recarga Pix pelo parceiro de liquidez, nos ambientes de teste e real (R$ 11).
 - Validação na fonte da verdade.
 - DvP automático e idempotente.
@@ -323,7 +330,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - Simulação local para contingência.
 
 **Fica para fases futuras:**
-- Restrição de transferências a carteiras credenciadas.
+- Restrição de transferências a carteiras credenciadas (transfer hook do Token-2022).
 - Carteira dupla e incentivo de 5%.
 - Crédito externo de 25%.
 - Maquininhas próprias.
@@ -338,13 +345,13 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 ## 14. Estrutura do repositório e documentação
 
 ```
-contracts/     contrato MumbucaPlus.sol e testes
+anchor/        programa mumbuca_plus (Rust/Anchor) e testes
 backend/       API, webhook, processador, emissão (Node.js + TypeScript)
 frontend/      dashboard (React + Vite)
 docs/
   superpowers/specs/   documento de design
   superpowers/plans/   plano de implementação
-  remix-deploy.md      tutorial de implantação pelo Remix
+  solana-deploy.md     tutorial de implantação na devnet
   demo-runbook.md      roteiro da demonstração e contingências
 ```
 
@@ -363,8 +370,9 @@ Instruções para rodar localmente e para implantar serão adicionadas aqui quan
 - GAFI/FATF. **Recomendação 16** (Travel Rule) e orientações sobre ativos virtuais e VASPs.
 - Banco Central do Brasil. Apresentação sobre moedas sociais e bancos comunitários. [bcb.gov.br](https://www.bcb.gov.br/pre/microFinancas/arquivos/horario_arquivos/apres_62.pdf)
 - Revista Pesquisa FAPESP. *Bancos comunitários impulsionam o desenvolvimento local*. [revistapesquisa.fapesp.br](https://revistapesquisa.fapesp.br/bancos-comunitarios-impulsionam-o-desenvolvimento-local/)
-- OpenZeppelin Contracts v5: [docs.openzeppelin.com/contracts/5.x](https://docs.openzeppelin.com/contracts/5.x/)
-- Polygon Amoy: [amoy.polygonscan.com](https://amoy.polygonscan.com)
+- Anchor: [anchor-lang.com](https://www.anchor-lang.com)
+- Solana: [solana.com/docs](https://solana.com/docs)
+- Solana Explorer (devnet): [explorer.solana.com](https://explorer.solana.com/?cluster=devnet)
 
 ---
 
