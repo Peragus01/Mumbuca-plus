@@ -14,6 +14,11 @@ describe('loadEnv', () => {
     expect(env.MAX_MINT_ATTEMPTS).toBe(5);
     expect(env.LOW_POL_THRESHOLD_WEI).toBe(100000000000000000n);
     expect(env.MIN_RECHARGE_CENTS).toBe(1100n);
+    expect(env.TOKEN_DEPLOY_BLOCK).toBe(0n);
+  });
+  it('parses TOKEN_DEPLOY_BLOCK and rejects invalid values', () => {
+    expect(loadEnv({ ...validEnv, TOKEN_DEPLOY_BLOCK: '1234567' }).TOKEN_DEPLOY_BLOCK).toBe(1234567n);
+    expect(() => loadEnv({ ...validEnv, TOKEN_DEPLOY_BLOCK: '-1' })).toThrow(/TOKEN_DEPLOY_BLOCK/);
   });
   it('rejects live env with test key', () => {
     expect(() => loadEnv({ ...validEnv, PROVIDER_ENV: 'live' })).toThrow(/OZAV_API_KEY/);

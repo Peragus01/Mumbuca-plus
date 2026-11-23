@@ -27,6 +27,7 @@ const schema = z
     AMOY_RPC_URL: z.string().url(),
     CHAIN_ID: z.literal('80002').transform(() => 80002 as const),
     TOKEN_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'must be an 0x address') as z.ZodType<`0x${string}`>,
+    TOKEN_DEPLOY_BLOCK: bigintStr('0'),
     MINTER_PRIVATE_KEY: z
       .string()
       .regex(/^0x[0-9a-fA-F]{64}$/, 'must be 0x + 64 hex chars') as z.ZodType<`0x${string}`>,

@@ -43,11 +43,15 @@ export class MintRevertedError extends Error {
   }
 }
 
-function decodedRevertName(err: unknown): string | undefined {
+/**
+ * Returns the custom error name for a decoded revert, "UnknownRevert" for a revert that
+ * could not be decoded (empty data, unknown selector), or undefined if it is not a revert at all.
+ */
+export function decodedRevertName(err: unknown): string | undefined {
   if (!(err instanceof BaseError)) return undefined;
   const revert = err.walk((e) => e instanceof ContractFunctionRevertedError);
   if (revert instanceof ContractFunctionRevertedError) {
-    return revert.data?.errorName ?? undefined;
+    return revert.data?.errorName ?? 'UnknownRevert';
   }
   return undefined;
 }

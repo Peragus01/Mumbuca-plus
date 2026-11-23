@@ -17,6 +17,7 @@ const gateway = createViemTokenGateway({
   chainId: env.CHAIN_ID,
   tokenAddress: env.TOKEN_ADDRESS,
   minterPrivateKey: env.MINTER_PRIVATE_KEY,
+  logsFromBlock: env.TOKEN_DEPLOY_BLOCK,
 });
 
 const amountWei = (BigInt(cents) * 10n ** 18n) / 100n;
