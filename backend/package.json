@@ -9,6 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:chain": "npm run compile -w contracts && vitest run --config vitest.chain.config.ts",
+    "smoke:mint": "tsx scripts/mint-smoke.ts",
     "start": "node dist/main.js"
   },
   "dependencies": {
