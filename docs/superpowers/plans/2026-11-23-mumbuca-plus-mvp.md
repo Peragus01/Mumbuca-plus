@@ -89,7 +89,7 @@ MumbucaPlus/
 ### Task 1: Contrato `MumbucaPlus` com testes
 
 **Files:**
-- Create: `package.json`, `.gitignore`, `.nvmrc`, `README.md` (raiz)
+- Create: `package.json`, `.gitignore`, `.nvmrc` (raiz). `README.md` já existe (tese e arquitetura em português) — **não sobrescrever**.
 - Create: `contracts/package.json`, `contracts/hardhat.config.ts`, `contracts/contracts/MumbucaPlus.sol`
 - Test: `contracts/test/MumbucaPlus.test.ts`
 
@@ -489,7 +489,8 @@ Regras (spec §5.3–5.5):
 
 **Files:**
 - Modify: `package.json` (raiz: `build` = build do frontend + backend; `start` = `npm run start -w backend`)
-- Create: `docs/demo-runbook.md`, atualizar `README.md`
+- Create: `docs/demo-runbook.md`
+- Modify: `README.md` — só a seção 12 (substituir a frase "Instruções para rodar localmente…" por instruções reais de execução local e deploy) e o "Status" da seção 11; não alterar as demais seções.
 
 **Interfaces:**
 - Consumes: tudo.
