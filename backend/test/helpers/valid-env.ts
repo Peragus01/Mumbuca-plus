@@ -1,11 +1,14 @@
+import { Keypair } from '@solana/web3.js';
+
+export const validMinter = Keypair.generate();
+
 export const validEnv = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
   DEMO_PASSWORD: 'demo-password-123',
   SESSION_SECRET: 's'.repeat(32),
-  AMOY_RPC_URL: 'https://rpc-amoy.polygon.technology',
-  CHAIN_ID: '80002',
-  TOKEN_ADDRESS: '0x' + 'a'.repeat(40),
-  MINTER_PRIVATE_KEY: '0x' + 'b'.repeat(64),
+  SOLANA_RPC_URL: 'https://api.devnet.solana.com',
+  PROGRAM_ID: Keypair.generate().publicKey.toBase58(),
+  MINTER_SECRET_KEY: JSON.stringify(Array.from(validMinter.secretKey)),
   PROVIDER_ENV: 'sandbox',
   OZAV_API_KEY: 'ozav_sk_test_abc',
   OZAV_CUSTOMER_ID: 'cus_1',

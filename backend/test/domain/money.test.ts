@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { keccak256, toBytes } from 'viem';
-import { parseBrlToCents, centsToWei, formatCentsBRL, paymentRefFor } from '../../src/domain/money.js';
+import { keccak_256 } from '@noble/hashes/sha3';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
+import { parseBrlToCents, centsToUnits, formatUnitsMum, formatCentsBRL, paymentRefFor } from '../../src/domain/money.js';
 
 describe('parseBrlToCents', () => {
   it('parses valid amounts', () => {
@@ -19,12 +20,17 @@ describe('parseBrlToCents', () => {
 });
 
 describe('conversions', () => {
-  it('centsToWei', () => expect(centsToWei(1100n)).toBe(11n * 10n ** 18n));
+  it('centsToUnits is identity (2 decimals)', () => expect(centsToUnits(1100n)).toBe(1100n));
+  it('formatUnitsMum', () => {
+    expect(formatUnitsMum(1100n)).toBe('11,00 Mum+');
+    expect(formatUnitsMum(100000n)).toBe('1.000,00 Mum+');
+    expect(formatUnitsMum(5n)).toBe('0,05 Mum+');
+  });
   it('formatCentsBRL', () => {
     expect(formatCentsBRL(100000n)).toBe('R$ 1.000,00');
     expect(formatCentsBRL(5n)).toBe('R$ 0,05');
   });
   it('paymentRefFor', () => {
-    expect(paymentRefFor('ozav', 'ozav_tr_1')).toBe(keccak256(toBytes('ozav:ozav_tr_1')));
+    expect(paymentRefFor('ozav', 'ozav_tr_1')).toBe('0x' + bytesToHex(keccak_256(utf8ToBytes('ozav:ozav_tr_1'))));
   });
 });

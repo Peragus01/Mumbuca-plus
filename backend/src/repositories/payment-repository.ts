@@ -7,9 +7,10 @@ export type PaymentPatch = Partial<
     Payment,
     | 'receivedAmountCents'
     | 'paymentRef'
-    | 'mintAmountWei'
-    | 'txHash'
-    | 'blockNumber'
+    | 'mintAmountUnits'
+    | 'txSignature'
+    | 'slot'
+    | 'lastValidBlockHeight'
     | 'needsReview'
     | 'amountMismatch'
     | 'failureReason'
@@ -30,9 +31,10 @@ interface PaymentRow {
   pix_br_code: string | null;
   pix_expires_at: Date | null;
   payment_ref: string | null;
-  mint_amount_wei: string | null;
-  tx_hash: string | null;
-  block_number: string | number | bigint | null;
+  mint_amount_units: string | null;
+  tx_signature: string | null;
+  slot: string | number | bigint | null;
+  last_valid_block_height: string | number | bigint | null;
   needs_review: boolean;
   amount_mismatch: boolean;
   failure_reason: string | null;
@@ -57,9 +59,10 @@ function mapPayment(r: PaymentRow): Payment {
     pixBrCode: r.pix_br_code,
     pixExpiresAt: r.pix_expires_at,
     paymentRef: r.payment_ref,
-    mintAmountWei: r.mint_amount_wei,
-    txHash: r.tx_hash,
-    blockNumber: big(r.block_number),
+    mintAmountUnits: r.mint_amount_units,
+    txSignature: r.tx_signature,
+    slot: big(r.slot),
+    lastValidBlockHeight: big(r.last_valid_block_height),
     needsReview: r.needs_review,
     amountMismatch: r.amount_mismatch,
     failureReason: r.failure_reason,
@@ -73,9 +76,10 @@ function mapPayment(r: PaymentRow): Payment {
 const PATCH_COLUMNS: Record<keyof PaymentPatch, string> = {
   receivedAmountCents: 'received_amount_cents',
   paymentRef: 'payment_ref',
-  mintAmountWei: 'mint_amount_wei',
-  txHash: 'tx_hash',
-  blockNumber: 'block_number',
+  mintAmountUnits: 'mint_amount_units',
+  txSignature: 'tx_signature',
+  slot: 'slot',
+  lastValidBlockHeight: 'last_valid_block_height',
   needsReview: 'needs_review',
   amountMismatch: 'amount_mismatch',
   failureReason: 'failure_reason',

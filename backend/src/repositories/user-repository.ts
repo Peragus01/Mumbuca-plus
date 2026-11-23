@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { getAddress } from 'viem';
 import type { Db } from '../db/db.js';
+import { parseSolanaAddress } from '../domain/solana-address.js';
 
 export interface User {
   id: string;
@@ -46,12 +46,8 @@ export class UserRepository {
   constructor(private readonly db: Db) {}
 
   async create(input: { handle: string; displayName: string; walletAddress: string }): Promise<User> {
-    let wallet: string;
-    try {
-      wallet = getAddress(input.walletAddress);
-    } catch {
-      throw new InvalidWalletAddress(input.walletAddress);
-    }
+    const wallet = parseSolanaAddress(input.walletAddress);
+    if (wallet === null) throw new InvalidWalletAddress(input.walletAddress);
     try {
       const { rows } = await this.db.query<UserRow>(
         'insert into users (id, handle, display_name, wallet_address) values ($1, $2, $3, $4) returning *',

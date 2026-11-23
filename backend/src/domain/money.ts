@@ -1,4 +1,5 @@
-import { keccak256, toBytes } from 'viem';
+import { keccak_256 } from '@noble/hashes/sha3';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import type { ProviderName } from './payment.js';
 
 const BRL_RE = /^(0|[1-9]\d{0,14})(\.\d{1,6})?$/;
@@ -12,9 +13,15 @@ export function parseBrlToCents(amount: string): { cents: bigint; truncated: boo
   return { cents, truncated };
 }
 
-/** 1 cent = 0.01 token = 10^16 wei (18 decimals). */
-export function centsToWei(cents: bigint): bigint {
-  return cents * 10n ** 16n;
+/** Token-2022 mint has 2 decimals, so 1 cent = 1 base unit. */
+export function centsToUnits(cents: bigint): bigint {
+  return cents;
+}
+
+/** Formats base units (2 decimals) as pt-BR, e.g. 1100n -> "11,00 Mum+". */
+export function formatUnitsMum(units: bigint): string {
+  const whole = (units / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${whole},${(units % 100n).toString().padStart(2, '0')} Mum+`;
 }
 
 export function formatCentsBRL(cents: bigint): string {
@@ -24,5 +31,5 @@ export function formatCentsBRL(cents: bigint): string {
 }
 
 export function paymentRefFor(provider: ProviderName, providerPaymentId: string): `0x${string}` {
-  return keccak256(toBytes(`${provider}:${providerPaymentId}`));
+  return `0x${bytesToHex(keccak_256(utf8ToBytes(`${provider}:${providerPaymentId}`)))}`;
 }

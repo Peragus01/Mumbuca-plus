@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Keypair } from '@solana/web3.js';
 import { createTestDb } from '../helpers/test-db.js';
 import type { Db } from '../../src/db/db.js';
 import { UserRepository } from '../../src/repositories/user-repository.js';
@@ -7,7 +8,7 @@ import { PaymentRepository } from '../../src/repositories/payment-repository.js'
 async function setup() {
   const db = await createTestDb();
   const user = await new UserRepository(db).create({
-    handle: 'ana', displayName: 'Ana', walletAddress: '0x52908400098527886E0F7030069857D2E4169EE7',
+    handle: 'ana', displayName: 'Ana', walletAddress: Keypair.generate().publicKey.toBase58(),
   });
   const repo = new PaymentRepository(db);
   const mk = (cents = 2500n) =>
@@ -114,12 +115,22 @@ describe('PaymentRepository', () => {
     expect(typeof p.requestedAmountCents).toBe('bigint');
     expect(p.requestedAmountCents).toBe(9007199254740993n);
     expect(p.receivedAmountCents).toBeNull();
-    const t = await repo.transition(p.id, ['AWAITING_PAYMENT'], 'MINTED', { receivedAmountCents: 5n, blockNumber: 77n });
+    const t = await repo.transition(p.id, ['AWAITING_PAYMENT'], 'MINTED', {
+      receivedAmountCents: 5n, slot: 77n, lastValidBlockHeight: 9007199254740993n, txSignature: 'sig1', mintAmountUnits: '500',
+    });
     expect(typeof t!.receivedAmountCents).toBe('bigint');
-    expect(typeof t!.blockNumber).toBe('bigint');
+    expect(typeof t!.slot).toBe('bigint');
+    expect(typeof t!.lastValidBlockHeight).toBe('bigint');
+    expect(t!.txSignature).toBe('sig1');
+    expect(t!.mintAmountUnits).toBe('500');
     expect(typeof t!.attempts).toBe('number');
     const f = await repo.findById(p.id);
     expect(typeof f!.requestedAmountCents).toBe('bigint');
-    expect(f!.blockNumber).toBe(77n);
+    expect(f!.slot).toBe(77n);
+    expect(f!.lastValidBlockHeight).toBe(9007199254740993n);
+    expect(typeof f!.lastValidBlockHeight).toBe('bigint');
+    expect(f!.txSignature).toBe('sig1');
+    expect(p.slot).toBeNull();
+    expect(p.lastValidBlockHeight).toBeNull();
   });
 });

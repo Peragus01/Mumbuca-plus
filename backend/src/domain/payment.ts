@@ -33,9 +33,10 @@ export interface Payment {
   pixBrCode: string | null;
   pixExpiresAt: Date | null;
   paymentRef: string | null;
-  mintAmountWei: string | null;
-  txHash: string | null;
-  blockNumber: bigint | null;
+  mintAmountUnits: string | null;
+  txSignature: string | null;
+  slot: bigint | null;
+  lastValidBlockHeight: bigint | null;
   needsReview: boolean;
   amountMismatch: boolean;
   failureReason: string | null;
