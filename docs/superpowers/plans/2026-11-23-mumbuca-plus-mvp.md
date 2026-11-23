@@ -167,7 +167,7 @@ MumbucaPlus/
   - `centsToWei(cents: bigint): bigint`; `formatCentsBRL(cents: bigint): string` (`"R$ 1.000,00"`); `paymentRefFor(provider: ProviderName, providerPaymentId: string): \`0x${string}\``.
   - `type ProviderName = 'ozav' | 'simulated' | 'mercadopago'`; `type ProviderEnv = 'sandbox' | 'live' | 'local'`; `type PaymentStatus` (lista das Global Constraints); `OPEN_STATUSES`; `interface Payment` (campos camelCase da tabela abaixo); `rechargeLimits(provider: ProviderName, env: Env): { minCents: bigint; maxCents: bigint }`.
 
-`Env` (zod): `DATABASE_URL`, `DATABASE_SSL` (bool, default false), `PORT` (default 3000), `DEMO_PASSWORD` (min 12), `SESSION_SECRET` (min 32), `AMOY_RPC_URL`, `CHAIN_ID` (literal 80002), `TOKEN_ADDRESS` (endereço), `MINTER_PRIVATE_KEY` (0x + 64 hex), `PROVIDER_ENV` (`sandbox|live`), `OZAV_BASE_URL` (default `https://developers.ozav.io/v2`), `OZAV_API_KEY`, `OZAV_CUSTOMER_ID`, `OZAV_WALLET_ID`, `OZAV_WEBHOOK_SECRET` (opcional), `OZAV_TARGET_CURRENCY` (`BRS|USDT`), `OZAV_TARGET_CHAIN` (default `solana`), `MIN_RECHARGE_CENTS`, `MAX_RECHARGE_CENTS`, `RECONCILE_INTERVAL_MS` (default 5000), `MINT_RECEIPT_TIMEOUT_MS` (default 60000), `MAX_MINT_ATTEMPTS` (default 5), `LOW_POL_THRESHOLD_WEI` (default `100000000000000000`).
+`Env` (zod): `DATABASE_URL`, `DATABASE_SSL` (bool, default false), `PORT` (default 3000), `DEMO_PASSWORD` (min 12), `SESSION_SECRET` (min 32), `AMOY_RPC_URL`, `CHAIN_ID` (literal 80002), `TOKEN_ADDRESS` (endereço), `MINTER_PRIVATE_KEY` (0x + 64 hex), `PROVIDER_ENV` (`sandbox|live`), `OZAV_BASE_URL` (default `https://developers.ozav.io/v2`), `OZAV_API_KEY`, `OZAV_CUSTOMER_ID`, `OZAV_WALLET_ID`, `OZAV_WEBHOOK_SECRET` (opcional), `OZAV_TARGET_CURRENCY` (literal `BRS`, default `BRS`), `OZAV_TARGET_CHAIN` (default `solana`), `MIN_RECHARGE_CENTS`, `MAX_RECHARGE_CENTS`, `RECONCILE_INTERVAL_MS` (default 5000), `MINT_RECEIPT_TIMEOUT_MS` (default 60000), `MAX_MINT_ATTEMPTS` (default 5), `LOW_POL_THRESHOLD_WEI` (default `100000000000000000`).
 
 Migration `001_init.sql`:
 ```sql
@@ -337,7 +337,8 @@ type ProviderRegistry = Record<ProviderName, PaymentProvider | undefined>;
 - [ ] **Step 2: Run** `npm test -w backend -- providers` — Expected: FAIL.
 - [ ] **Step 3: Implement** adaptando o código Peragus indicado; escrever `docs/providers/ozav.md` (env vars, corredores por ambiente, webhook, simulate, limitação `webhooks:write`).
 - [ ] **Step 4: Run** — Expected: PASS.
-- [ ] **Step 5: Commit** — `feat(backend): add payment provider interface with OZAV, simulated and Mercado Pago stub`
+- [ ] **Step 5: Sonda do corredor BRS no sandbox** — script `backend/scripts/ozav-brs-probe.ts` (`npm run probe:ozav -w backend`) com a chave sandbox: `POST /quotes` BRL→BRS de R$ 1.000 e, se aceito, `POST /transfers` + `simulate`, imprimindo os status. Expected: cotação aceita. Se a OZAV responder "indisponível para este corredor", registrar a resposta em `docs/providers/ozav.md`, avisar o dono e seguir com `SIMULADO` como caminho garantido da demo (não introduzir outro ativo).
+- [ ] **Step 6: Commit** — `feat(backend): add payment provider interface with OZAV, simulated and Mercado Pago stub`
 
 ---
 

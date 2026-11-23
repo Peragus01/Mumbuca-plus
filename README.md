@@ -12,7 +12,7 @@
 2. [O que o Mumbuca+ faz](#2-o-que-o-mumbuca-faz)
 3. [A rota do dinheiro: BRL → BRS → Mumbuca+](#3-a-rota-do-dinheiro-brl--brs--mumbuca)
 4. [Provedor de liquidez](#4-provedor-de-liquidez)
-5. [Tese jurídica: por que o Mumbuca+ não é uma operação de câmbio](#5-tese-jurídica-por-que-o-mumbuca-não-é-uma-operação-de-câmbio)
+5. [Tese jurídica: o M+ é um utility token do ecossistema de Maricá](#5-tese-jurídica-o-m-é-um-utility-token-do-ecossistema-de-maricá)
 6. [Arquitetura](#6-arquitetura)
 7. [Fluxo ponta a ponta](#7-fluxo-ponta-a-ponta)
 8. [Segurança e garantias](#8-segurança-e-garantias)
@@ -66,7 +66,7 @@ flowchart LR
 
 Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim M+ (moeda social com paridade com o real). Nenhuma perna envolve moeda estrangeira.
 
-> **Nota sobre o ambiente de testes:** o sandbox da OZAV não oferece o corredor BRL→BRS e aceita Pix só entre R$ 1.000 e R$ 10.000. Por isso, a demonstração em sandbox usa outro corredor disponível (BRL→USDT) **apenas para gerar o evento de "BRL recebido"**. O Mumbuca+ só observa a perna em reais. A rota BRL→BRS é a usada no ambiente real, com mínimo de R$ 11.
+> **Ambientes:** a mesma rota BRL → BRS → Mumbuca+ roda no sandbox da OZAV (Pix simulado, valores entre R$ 1.000 e R$ 10.000) e no ambiente real (Pix de verdade, mínimo de R$ 11). O ativo de destino é configurado por uma única variável (`OZAV_TARGET_CURRENCY=BRS`).
 
 ## 4. Provedor de liquidez
 
@@ -88,33 +88,49 @@ O Mumbuca+ **não guarda dinheiro, não converte moedas e não faz o Pix**. Essa
 
 Detalhes técnicos: [`docs/providers/ozav.md`](docs/providers/ozav.md) (criado durante a implementação).
 
-## 5. Tese jurídica: por que o Mumbuca+ não é uma operação de câmbio
+## 5. Tese jurídica: o M+ é um utility token do ecossistema de Maricá
 
-> ⚠️ **Esta seção apresenta uma tese em construção, não um parecer jurídico.** Ela precisa ser validada por advogado especializado em regulação financeira antes de qualquer uso fora do ambiente de testes.
+> ⚠️ **Esta seção apresenta uma tese em construção, não um parecer jurídico.** Ela precisa ser validada por advogado especializado em regulação financeira e em direito administrativo municipal antes de qualquer uso fora do ambiente de testes.
 
-### 5.1 Argumentos
+### 5.1 A tese em uma frase
 
-1. **Não há moeda estrangeira em nenhuma etapa.** No sentido clássico, câmbio é a troca de moeda nacional por moeda estrangeira (e vice-versa). Na rota BRL → BRS → M+, o valor é sempre denominado em reais e não existe cotação, spread cambial ou trava de câmbio. Na própria documentação da OZAV, o corredor BRL→BRS aparece sem perna de câmbio, ao contrário do BRL→USDT.
-2. **O Mumbuca+ não compra, não vende e não troca ativos virtuais com o cidadão.** O que o sistema faz é **emitir moeda social** depois de uma entrada em reais confirmada por terceiro. Não há mesa de negociação, livro de ofertas nem preço. A emissão é 1:1 e definida pela regra da política pública.
-3. **A operação financeira regulada fica com uma instituição especializada.** O recebimento do Pix, a conversão BRL→BRS, a custódia e o compliance (KYC, PLD/FT) ficam com o provedor de liquidez. O Mumbuca+ não movimenta recursos de terceiros.
-4. **O M+ segue o modelo de moeda social que o Brasil já reconhece.** Moedas sociais de bancos comunitários existem desde o Banco Palmas (1998). Elas têm **lastro em reais, paridade 1:1 e circulação territorial**, e **não têm curso forçado** (ninguém é obrigado a aceitá-las), como descreve material do próprio Banco Central. A Mumbuca já opera assim em Maricá, com base em legislação municipal (o relatório cita a Lei Municipal nº 3.673/2025). O Mumbuca+ só troca o meio, de cartão e app fechado para token.
-5. **O desenho evita, por construção, as hipóteses que a regulação de ativos virtuais trata como câmbio:** não há pagamento ou transferência internacional e não há compra ou venda contra moeda estrangeira, que o § 2º do art. 76-A da Resolução BCB nº 277/2022 proíbe.
+O **Mumbuca+ (M+) é um token de utilidade (utility token)** do ecossistema da moeda social de Maricá. Ele dá ao titular acesso a produtos e serviços da rede credenciada do município, dentro das regras de um programa público. Por isso fica **fora do conceito legal de "ativo virtual"** da Lei nº 14.478/2022 e, consequentemente, fora das regras de câmbio para prestadores de serviços de ativos virtuais do Banco Central. **Quem regula o uso desse token é o gestor do próprio ecossistema:** o Município de Maricá, por lei municipal, e o Banco Comunitário Mumbuca, que administra a rede.
 
-### 5.2 Ponto de atenção que a tese precisa enfrentar
+### 5.2 Fundamentos
 
-A **Resolução BCB nº 521/2025** incluiu o art. 76-A na Resolução BCB nº 277/2022, em vigor desde 2 de fevereiro de 2026. Pelo inciso IV, entra no mercado de câmbio a prestação de serviços de ativos virtuais que envolva *"compra, venda ou troca de ativos virtuais referenciados em moeda fiduciária"*. **O texto não distingue entre moeda estrangeira e real.** Uma leitura literal, defendida por parte da doutrina, alcança também stablecoins referenciadas em reais, como o BRS.
+1. **A lei exclui expressamente os tokens de utilidade do conceito de ativo virtual.** O art. 3º da Lei nº 14.478/2022 define ativo virtual como *"a representação digital de valor que pode ser negociada ou transferida por meios eletrônicos e utilizada para realização de pagamentos ou com propósito de investimento"*. Em seguida exclui, no inciso III, os *"instrumentos que provejam ao seu titular acesso a produtos ou serviços especificados ou a benefício proveniente desses produtos ou serviços, a exemplo de pontos e recompensas de programas de fidelidade"*.
+2. **O M+ é instrumento de acesso a um benefício de programa público.** Ele só é aceito na rede credenciada de Maricá e carrega as regras da política pública: o incentivo de 5% no comércio local e as categorias essenciais do crédito externo (saúde, transporte e emergência), previstos no relatório. Assim como os pontos de um programa de fidelidade, ele vale dentro de um ecossistema definido por quem o administra.
+3. **Não há propósito de investimento.** A paridade é fixa (1 M+ = R$ 1,00) e não há rendimento, valorização, venda pública nem mercado secundário promovido pelo emissor. A CVM, no Parecer de Orientação nº 40/2022, separa os tokens de utilidade dos tokens que são valores mobiliários pela ausência de expectativa de retorno sobre o esforço de terceiros.
+4. **Sem "ativo virtual", não há câmbio de ativo virtual.** O art. 76-A da Resolução BCB nº 277/2022 (incluído pela Resolução BCB nº 521/2025) leva ao mercado de câmbio a *prestação de serviços de ativos virtuais*. Se o M+ não é ativo virtual, a emissão e a circulação dele não entram nessa regra. Além disso, nenhuma etapa envolve moeda estrangeira.
+5. **Quem regula o token é o gestor do ecossistema.** A Mumbuca é uma moeda social instituída e disciplinada pelo Município de Maricá (o relatório cita a Lei Municipal nº 3.673/2025) e operada pelo Banco Comunitário Mumbuca. O credenciamento de lojistas, as regras de uso, os limites e a emissão contra entrada de reais são decisões desse gestor. O Mumbuca+ só leva essas regras para um token. Moedas sociais seguem esse modelo desde o Banco Palmas (1998): **lastro em reais, paridade 1:1, circulação territorial e ausência de curso forçado**, como descreve material do próprio Banco Central.
+6. **Cada camada tem o seu regulador.** A operação financeira fica com quem é regulado para ela:
 
-Como a tese responde a esse ponto:
-- **A compra de BRS é feita pelo provedor de liquidez**, que é quem presta o serviço de ativos virtuais. Se essa perna for enquadrada no art. 76-A, as obrigações decorrentes (identificação, finalidade, reporte) são do provedor. Elas não descaracterizam a política pública nem tornam o Mumbuca+ uma operação de câmbio.
-- **A emissão do M+ não é compra e venda por prestadora de serviços de ativos virtuais.** É emissão de moeda social por regra pública, sem contraparte negociando preço. Ainda assim, é preciso confirmar se o M+, como token pareado ao real, seria tratado como "ativo virtual referenciado em moeda fiduciária", e qual seria o papel do emissor numa operação real.
-- **Alternativa de desenho, caso o enquadramento da perna BRS seja desfavorável:** o Mumbuca+ pode observar **só a chegada do BRL** (que já é o gatilho técnico hoje) e manter a reserva em reais numa conta de pagamento, sem passar por stablecoin. A arquitetura permite isso sem mudar o núcleo de emissão.
+| Camada | Instrumento | Natureza | Quem regula / responde |
+|---|---|---|---|
+| Entrada | BRL via Pix | moeda nacional | Banco Central (Pix) e a instituição recebedora (provedor de liquidez) |
+| Reserva | BRS | ativo referenciado no real | Provedor de liquidez (OZAV), no regime de prestadores de serviços de ativos virtuais |
+| Uso | M+ | utility token da moeda social | Município de Maricá e Banco Comunitário Mumbuca |
 
-### 5.3 Perguntas para a validação jurídica
+### 5.3 Como o desenho técnico reforça a tese
 
-1. A aquisição de BRS contra reais, por um provedor de serviços de ativos virtuais, entra no art. 76-A, IV? Há posição do BCB (FAQ, consulta) sobre stablecoins referenciadas em real?
-2. O M+, emitido 1:1 por regra de política pública e de circulação territorial, é "ativo virtual" nos termos da Lei nº 14.478/2022? Ou é melhor tratado como moeda social digital, ou como instrumento de um arranjo de pagamento restrito?
-3. Qual entidade deve emitir o M+ numa operação real (banco comunitário, município, instituição de pagamento parceira), e qual autorização ela precisa?
-4. Quais obrigações de PLD/FT e LGPD recaem sobre a camada Mumbuca+, considerando que o KYC é feito pelo provedor de liquidez?
+- **Emissão só contra entrada confirmada:** o supply nasce de reais recebidos, sem pré-venda nem oferta pública.
+- **Paridade fixa e sem preço:** não há livro de ofertas, cotação nem negociação pelo sistema.
+- **Governança on-chain do gestor:** os papéis de administrador e pausador ficam com o gestor do ecossistema, que pode suspender emissões e ajustar limites.
+- **Próximo passo natural:** restringir no contrato as transferências a carteiras credenciadas (lojistas e beneficiários da rede). Isso materializa no código a "utilidade especificada" do art. 3º, III.
+
+### 5.4 Pontos de atenção
+
+- **"Produtos ou serviços especificados".** Um token aceito em qualquer comércio credenciado, com paridade em real, pode ser lido como **meio de pagamento**. Nessa leitura ele seria tratado como ativo virtual ou como instrumento de arranjo de pagamento (Lei nº 12.865/2013). A tese fica mais forte quanto mais fechada e definida for a rede e quanto menos o M+ circular fora dela.
+- **Competência da União sobre moeda.** Emitir moeda é competência da União (CF, art. 21, VII), e legislar sobre sistema monetário é privativo dela (CF, art. 22, VI). Por isso a tese trata o M+ como **instrumento de um programa municipal, sem curso forçado**, e nunca como moeda.
+- **A perna BRL→BRS.** O inciso IV do art. 76-A alcança, na literalidade, a *"compra, venda ou troca de ativos virtuais referenciados em moeda fiduciária"*. Se a aquisição de BRS for enquadrada aí, as obrigações são do provedor de liquidez, que é quem presta esse serviço, e não do ecossistema Mumbuca+.
+
+### 5.5 Perguntas para a validação jurídica
+
+1. O M+, com uso restrito à rede credenciada de Maricá e regras de programa público, se enquadra na exclusão do art. 3º, III, da Lei nº 14.478/2022?
+2. Que características (rede fechada, restrição de transferência, ausência de resgate livre) tornam essa exclusão mais segura?
+3. A lei municipal da Mumbuca dá base para o Município e o Banco Comunitário serem os gestores e reguladores do token, ou é preciso uma norma municipal específica para a versão tokenizada?
+4. Qual entidade deve ser a emissora formal do M+ numa operação real, e qual é a relação dela com o provedor de liquidez?
+5. Quais obrigações de PLD/FT e LGPD ficam com o gestor do ecossistema, considerando que o KYC da entrada é feito pelo provedor de liquidez?
 
 ## 6. Arquitetura
 
@@ -235,6 +251,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou provedor fora do ar,
 
 | Propriedade | Valor |
 |---|---|
+| Natureza | Utility token do ecossistema da moeda social de Maricá (ver seção 5) |
 | Padrão | ERC-20 (OpenZeppelin v5) |
 | Nome / símbolo | Mumbuca+ / M+ |
 | Decimais | 18 |
@@ -301,7 +318,10 @@ Instruções para rodar localmente e para implantar serão adicionadas aqui quan
 ## 13. Referências
 
 - Relatório *"Renda Básica de Cidadania — Mumbuca"*. Faculdade Sebrae, 2026. Inclui as fontes FGV, UFF, Banco Mumbuca, CODEMAR e Prefeitura de Maricá citadas nele.
-- Brasil. **Lei nº 14.478/2022**, marco legal dos prestadores de serviços de ativos virtuais.
+- Brasil. **Lei nº 14.478/2022**, marco legal dos prestadores de serviços de ativos virtuais. Art. 3º: definição de ativo virtual e exclusões. [planalto.gov.br](https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2022/lei/l14478.htm)
+- Brasil. **Constituição Federal**, arts. 21, VII, e 22, VI (competência da União sobre moeda e sistema monetário).
+- Brasil. **Lei nº 12.865/2013**, arranjos e instituições de pagamento.
+- Comissão de Valores Mobiliários. **Parecer de Orientação nº 40/2022**, criptoativos e o mercado de valores mobiliários (taxonomia de tokens de pagamento, de utilidade e referenciados a ativos).
 - Banco Central do Brasil. **Resoluções BCB nº 519, 520 e 521/2025**, sobre prestadores de serviços de ativos virtuais e a inclusão de operações com ativos virtuais no mercado de câmbio (art. 76-A da Resolução BCB nº 277/2022). [Texto da Resolução BCB nº 521](https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=521)
 - Banco Central do Brasil. Apresentação sobre moedas sociais e bancos comunitários (microfinanças). [bcb.gov.br](https://www.bcb.gov.br/pre/microFinancas/arquivos/horario_arquivos/apres_62.pdf)
 - Revista Pesquisa FAPESP. *Bancos comunitários impulsionam o desenvolvimento local*. [revistapesquisa.fapesp.br](https://revistapesquisa.fapesp.br/bancos-comunitarios-impulsionam-o-desenvolvimento-local/)
