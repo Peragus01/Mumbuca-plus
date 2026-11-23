@@ -29,7 +29,7 @@ Nenhum outro ativo é usado.
   sucesso; qualquer outro resultado vira `ProviderUnavailableError` e o processador recupera por metadata com
   `findChargeByPaymentId` (`GET /transfers?customer_id=`, paginado por `starting_after`, até 20 páginas).
 - `fetchPayment`: `GET /transfers/{id}`. Pago = status em `payment_confirmed|converting|payout_initiated|completed`
-  **ou** `source_leg.status = completed`. Valor = `amounts.source.amount` com moeda `BRL`, via `parseBrlToCents`
+  **ou** `source_leg.status = completed` (exceto se o status for `failed|cancelled|expired`: Pix pago com transferência falha vai para `review`, nunca é creditado). Valor = `amounts.source.amount` com moeda `BRL`, via `parseBrlToCents`
   (centavos truncados, nunca arredondados; campo inválido vai para `review`). `failed|cancelled` rejeitado,
   `expired` expirado, `awaiting_payment` pendente, `needs_review`/desconhecido `review`.
 - `simulatePayment`: `POST /transfers/{id}/simulate`, somente com `env = sandbox`.

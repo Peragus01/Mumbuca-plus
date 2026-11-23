@@ -147,6 +147,17 @@ describe('ozav provider: fetchPayment', () => {
     expect((await provider.fetchPayment('t')).kind).toBe('approved');
   });
 
+  it('failed/cancelled/expired with completed source leg -> review, never approved', async () => {
+    const { provider } = make([
+      transfer('failed', { source_leg: { status: 'completed' } }),
+      transfer('cancelled', { source_leg: { status: 'completed' } }),
+      transfer('expired', { source_leg: { status: 'completed' } }),
+    ]);
+    for (const s of ['failed', 'cancelled', 'expired']) {
+      expect(await provider.fetchPayment('t')).toEqual({ kind: 'review', reason: `transfer ${s} after payment` });
+    }
+  });
+
   it('amount "abc" -> review; currency USD -> review', async () => {
     const bad = (amount: string, currency: string) =>
       transfer('completed', { amounts: { source: { amount, currency }, target: { amount: '1', currency: 'BRS' } } });

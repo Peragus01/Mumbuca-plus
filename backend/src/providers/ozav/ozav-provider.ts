@@ -18,6 +18,7 @@ export interface OzavProviderOptions {
 
 /** Same reading as Peragus brs-progression.ts: these statuses mean the Pix was paid. */
 const PAID_STATUSES = new Set(['payment_confirmed', 'converting', 'payout_initiated', 'completed']);
+const TERMINAL_FAILURES = new Set(['failed', 'cancelled', 'expired']);
 const MAX_LIST_PAGES = 20;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -90,6 +91,10 @@ export function createOzavProvider(opts: OzavProviderOptions): PaymentProvider {
       const status = t.status;
       const sourceLeg = isObj(t.source_leg) ? t.source_leg.status : undefined;
 
+      // Terminal failure after the Pix was paid: money may be refunded by OZAV, so never credit (Peragus: needs_review).
+      if (sourceLeg === 'completed' && TERMINAL_FAILURES.has(status)) {
+        return { kind: 'review', reason: `transfer ${status} after payment` };
+      }
       if (sourceLeg === 'completed' || PAID_STATUSES.has(status)) {
         const amounts = isObj(t.amounts) ? t.amounts : {};
         const src = isObj(amounts.source) ? amounts.source : {};
