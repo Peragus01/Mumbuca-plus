@@ -548,12 +548,6 @@ textarea.code {
 
 /* ---------- badges ---------- */
 
-.badge-group {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
 .badge {
   display: inline-flex;
   align-items: center;
@@ -994,9 +988,6 @@ textarea.code {
   .history__side {
     align-items: flex-start;
     text-align: left;
-  }
-  .badge-group {
-    justify-content: flex-start;
   }
   .toolbar > .button {
     width: 100%;

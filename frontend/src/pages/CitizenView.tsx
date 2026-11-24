@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { api, type PaymentDTO, type UserDTO } from '../api';
 import { CopyButton } from '../components/CopyButton';
 import { RechargeDialog } from '../components/RechargeDialog';
@@ -31,13 +31,21 @@ export function CitizenView() {
 
   const user = users?.find((u) => u.id === userId) ?? null;
 
+  // Account whose data may be shown. Responses for any other account (a switch happened while
+  // the request was in flight, or after unmount) are dropped, so one person's balance/history
+  // can never appear under another person's name.
+  const currentUserId = useRef<string | null>(null);
+  useEffect(() => () => void (currentUserId.current = null), []);
+
   const refresh = useCallback(async (id: string) => {
     const [b, h] = await Promise.allSettled([api.balance(id), api.payments(id)]);
+    if (currentUserId.current !== id) return;
     setBalance(b.status === 'fulfilled' ? { state: 'ok', units: b.value.balanceUnits } : { state: 'error' });
     if (h.status === 'fulfilled') setHistory(h.value);
   }, []);
 
   useEffect(() => {
+    currentUserId.current = userId;
     if (!userId) return;
     storage.set(SELECTED_KEY, userId);
     setBalance({ state: 'loading' });
@@ -120,7 +128,7 @@ export function CitizenView() {
                       ? `+ ${formatMum(p.mintAmountUnits)}`
                       : formatBRL(p.requestedAmountCents)}
                   </span>
-                  <StatusBadge status={p.status} origin={p.origin} />
+                  <StatusBadge status={p.status} />
                   {p.explorerUrl && (
                     <a className="link small" href={p.explorerUrl} target="_blank" rel="noopener noreferrer">
                       ver na rede ↗
