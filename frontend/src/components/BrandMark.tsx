@@ -1,6 +1,14 @@
-/** Mumbuca+ logo mark (inline SVG, no external asset). */
-export function BrandMark({ size = 32 }: { size?: number }) {
-  return (
+type BrandMarkProps = {
+  size?: number;
+  /** Renders the "Mumbuca+" wordmark next to the mark, with the "+" in Mumbuca yellow. */
+  wordmark?: boolean;
+  /** With `wordmark`, also renders the "Moeda social de Maricá" subtitle. */
+  subtitle?: boolean;
+};
+
+/** Mumbuca+ logo mark (inline SVG, no external asset), optionally with the wordmark. */
+export function BrandMark({ size = 32, wordmark = false, subtitle = false }: BrandMarkProps) {
+  const mark = (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
       <rect width="48" height="48" rx="14" fill="var(--brand)" />
       <path
@@ -14,5 +22,24 @@ export function BrandMark({ size = 32 }: { size?: number }) {
       <circle cx="37" cy="11" r="6" fill="var(--accent)" />
       <path d="M37 8.2v5.6M34.2 11h5.6" stroke="var(--brand-ink)" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
+  );
+
+  if (!wordmark) return mark;
+
+  return (
+    <span className="brandmark">
+      {mark}
+      <span className="brandmark__text">
+        <span className="brandmark__name" style={{ fontSize: `${Math.round(size * 0.5)}px` }}>
+          Mumbuca<span className="brand-plus">+</span>
+        </span>
+        {subtitle && (
+          <>
+            <span className="sr-only">, </span>
+            <span className="brandmark__subtitle">Moeda social de Maricá</span>
+          </>
+        )}
+      </span>
+    </span>
   );
 }

@@ -55,8 +55,7 @@ export function App() {
       <header className="topbar">
         <div className="topbar__inner">
           <a className="brand" href="#/carteira" aria-label="Mumbuca+, início">
-            <BrandMark size={32} />
-            <span className="brand__name">Mumbuca+</span>
+            <BrandMark size={32} wordmark />
           </a>
           <nav className="tabs" aria-label="Seções">
             <a className="tabs__item" href="#/carteira" aria-current={view === 'carteira' ? 'page' : undefined}>
