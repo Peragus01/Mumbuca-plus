@@ -71,9 +71,20 @@ if (!values.verify) {
 
 const [config] = findConfigPda(programId);
 const [mint] = findMintPda(programId);
-const info = await connection.getAccountInfo(config, 'confirmed');
+let info: Awaited<ReturnType<Connection['getAccountInfo']>>;
+try {
+  info = await connection.getAccountInfo(config, 'confirmed');
+} catch {
+  // Do not print the error: it may contain the RPC URL.
+  fail('could not read the config account (RPC unavailable or rate limited); try again in a moment');
+}
 if (!info) fail('config account not found (initialize did not succeed)');
-const cfg = decodeConfigAccount(info.data);
+let cfg: ReturnType<typeof decodeConfigAccount>;
+try {
+  cfg = decodeConfigAccount(info.data);
+} catch {
+  fail('the account at the config PDA is not a Mumbuca+ Config (wrong PROGRAM_ID?)');
+}
 
 const cluster = rpcUrl.includes('devnet') ? '?cluster=devnet' : '';
 if (!sendFailed) console.log('initialize signature:', sig);

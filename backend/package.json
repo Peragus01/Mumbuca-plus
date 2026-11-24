@@ -15,7 +15,9 @@
     "probe:ozav": "tsx scripts/ozav-brs-probe.ts",
     "start": "node dist/src/main.js",
     "init:program": "tsx scripts/init-program.ts",
-    "smoke:mint": "tsx scripts/mint-smoke.ts"
+    "smoke:mint": "tsx scripts/mint-smoke.ts",
+    "pause:program": "tsx scripts/pause-program.ts --pause",
+    "unpause:program": "tsx scripts/pause-program.ts --unpause"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",
