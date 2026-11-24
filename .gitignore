@@ -4,3 +4,4 @@ dist
 coverage
 anchor/target
 anchor/test-ledger
+.superpowers/brainstorm/
