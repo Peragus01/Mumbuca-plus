@@ -13,6 +13,19 @@ export interface WebhookRoutesOptions {
 
 const BODY_LIMIT = 256 * 1024;
 
+/** Cap of the raw webhook body kept in payment_events.detail (spec §5.2 audit). */
+export const AUDIT_BODY_MAX_BYTES = 256 * 1024;
+
+/**
+ * Audit copy of a VERIFIED webhook body: the raw JSON text (capped, NUL stripped since jsonb
+ * rejects NUL). Headers and the signature are never stored.
+ */
+export function auditBody(raw: Buffer, maxBytes = AUDIT_BODY_MAX_BYTES): { rawBody: string; rawBodyBytes: number; truncated: boolean } {
+  const truncated = raw.length > maxBytes;
+  const rawBody = raw.subarray(0, maxBytes).toString('utf8').replace(/\u0000/g, '');
+  return { rawBody, rawBodyBytes: raw.length, truncated };
+}
+
 function flatHeaders(h: Record<string, string | string[] | undefined>): Record<string, string | undefined> {
   const out: Record<string, string | undefined> = {};
   // A repeated header is ambiguous: drop it so verification fails closed.
@@ -69,7 +82,7 @@ export const webhookRoutes: FastifyPluginAsync<WebhookRoutesOptions> = async (ap
     const fresh = await payments.recordProviderEvent({
       paymentId: payment.id,
       providerEventId: `ozav:${result.providerEventId}`,
-      detail: { provider: 'ozav', providerPaymentId: result.providerPaymentId },
+      detail: { provider: 'ozav', providerPaymentId: result.providerPaymentId, ...auditBody(raw) },
     });
     if (!fresh) return { duplicate: true };
 

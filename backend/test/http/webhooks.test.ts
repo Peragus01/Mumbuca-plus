@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { AUDIT_BODY_MAX_BYTES, auditBody } from '../../src/http/routes/webhooks.js';
 import { setupApp, signedWebhook, transferEvent, WARMUP_TIMEOUT_MS, warmup } from '../helpers/http-app.js';
 
 async function withPaidCharge() {
@@ -107,5 +108,31 @@ describe('POST /webhooks/payments', () => {
     const res = await t.post(signedWebhook({ id: 'evt_cust', object: 'event', type: 'customer.updated', data: {} }));
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ignored: true });
+  });
+
+  it('stores the verified raw body (no headers/signature) in payment_events.detail for audit', async () => {
+    const t = await withPaidCharge();
+    const w = signedWebhook(transferEvent('evt_audit_1', t.p.providerPaymentId!, { mumbuca_payment_id: t.p.id }));
+    expect((await t.post(w)).statusCode).toBe(200);
+    await t.app.idle();
+    const { rows } = await t.db.query<{ detail: Record<string, unknown> }>(
+      `select detail from payment_events where provider_event_id = 'ozav:evt_audit_1'`,
+    );
+    expect(rows).toHaveLength(1);
+    const detail = JSON.stringify(rows[0]!.detail);
+    expect(detail).toContain('evt_audit_1');
+    expect(detail).not.toContain(w.headers['x-ozav-signature']);
+    expect(detail).not.toContain('x-ozav-signature');
+  });
+});
+
+describe('auditBody', () => {
+  it('caps the stored body and strips NUL characters', () => {
+    const small = auditBody(Buffer.from('{"id":"evt_1"}'));
+    expect(small).toEqual({ rawBody: '{"id":"evt_1"}', rawBodyBytes: 14, truncated: false });
+    const big = auditBody(Buffer.from('x'.repeat(100)), 10);
+    expect(big).toEqual({ rawBody: 'x'.repeat(10), rawBodyBytes: 100, truncated: true });
+    expect(auditBody(Buffer.from([0x61, 0x00, 0x62])).rawBody).toBe('ab');
+    expect(AUDIT_BODY_MAX_BYTES).toBe(256 * 1024);
   });
 });
