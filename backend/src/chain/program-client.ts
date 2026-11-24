@@ -118,6 +118,27 @@ export function configMatches(
   return cfg.admin.equals(expected.admin) && cfg.minter.equals(expected.minter) && cfg.pauser.equals(expected.pauser);
 }
 
+/** Expected deployment values the backend relies on. */
+export interface ExpectedProgramConfig {
+  minter: PublicKey;
+  /** Largest amount (cents = token units) the backend may try to mint in one transaction. */
+  maxRechargeCents: bigint;
+}
+
+export type ProgramConfigIssue = 'minter_mismatch' | 'max_mint_per_tx_below_max_recharge' | 'program_paused';
+
+/** Deployment problems that would make every mint fail (empty = OK). */
+export function programConfigIssues(
+  cfg: Pick<ConfigAccount, 'minter' | 'maxMintPerTx' | 'paused'>,
+  expected: ExpectedProgramConfig,
+): ProgramConfigIssue[] {
+  const issues: ProgramConfigIssue[] = [];
+  if (!cfg.minter.equals(expected.minter)) issues.push('minter_mismatch');
+  if (cfg.maxMintPerTx < expected.maxRechargeCents) issues.push('max_mint_per_tx_below_max_recharge');
+  if (cfg.paused) issues.push('program_paused');
+  return issues;
+}
+
 /** `pause` / `unpause` (accounts: pauser signer, config). Used by tests and ops tooling. */
 export function buildPauserInstruction(
   programId: PublicKey,

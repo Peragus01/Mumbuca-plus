@@ -35,6 +35,7 @@ describe('loadEnv', () => {
     expect(env.MAX_MINT_ATTEMPTS).toBe(5);
     expect(env.LOW_SOL_THRESHOLD_LAMPORTS).toBe(100000000n);
     expect(env.MINT_CONFIRM_TIMEOUT_MS).toBe(60000);
+    expect(env.RPC_TIMEOUT_MS).toBe(12000);
     expect(env.MIN_RECHARGE_CENTS).toBe(1100n);
     expect(env.PROGRAM_ID).toBe(validEnv.PROGRAM_ID);
   });

@@ -586,4 +586,103 @@ describe('PaymentProcessor', () => {
       expect(JSON.stringify(rows)).not.toContain('SECRET123');
     });
   });
+
+  describe('Ruling R12 (deployment misconfiguration never FAILs a paid payment)', () => {
+    it('(a) Unauthorized keeps APPROVED with lastError program_unauthorized, never counts toward FAILED', async () => {
+      const t = await setup();
+      const p = await t.paid();
+      for (let i = 0; i < 5; i++) t.chain.sendQueue.push(new MintRejectedError('Unauthorized'));
+      await t.proc.signal(p.id, 'webhook');
+      for (let i = 0; i < 4; i++) await t.proc.process(p.id);
+      const r = await t.get(p.id);
+      expect(r.status).toBe('APPROVED');
+      expect(r.lastError).toBe('program_unauthorized');
+      expect(r.mintRejections).toBe(0);
+      expect(r.failureReason).toBeNull();
+      expect(t.logs.some((l) => l.level === 'warn' && (l.obj as { reason?: string }).reason === 'Unauthorized')).toBe(true);
+      expect((await t.proc.process(p.id)).status).toBe('MINTED');
+    });
+
+    it('(a) UnknownProgramError without receipt keeps APPROVED with lastError program_error, not counted', async () => {
+      const t = await setup();
+      const p = await t.paid();
+      for (let i = 0; i < 4; i++) t.chain.sendQueue.push(new MintRejectedError('UnknownProgramError'));
+      await t.proc.signal(p.id, 'webhook');
+      for (let i = 0; i < 3; i++) await t.proc.process(p.id);
+      const r = await t.get(p.id);
+      expect(r.status).toBe('APPROVED');
+      expect(r.lastError).toBe('program_error');
+      expect(r.mintRejections).toBe(0);
+      expect((await t.proc.process(p.id)).status).toBe('MINTED');
+    });
+
+    it('(c) received above MAX_RECHARGE_CENTS -> review (needsReview, amount_above_maximum), never mints', async () => {
+      const t = await setup();
+      const p = await t.paid({ cents: 2500n, received: t.env.MAX_RECHARGE_CENTS + 1n });
+      await t.proc.signal(p.id, 'webhook');
+      const r = await t.get(p.id);
+      expect(r.status).toBe('VALIDATING');
+      expect(r.needsReview).toBe(true);
+      expect(r.lastError).toBe('amount_above_maximum');
+      expect(r.failureReason).toBeNull();
+      expect(t.chain.sendMintCalls).toBe(0);
+    });
+
+    it('(c) received above the on-chain max_mint_per_tx -> review, never mints', async () => {
+      const t = await setup();
+      t.chain.config = { ...t.chain.config, maxMintPerTx: 3000n };
+      const p = await t.paid({ cents: 2500n, received: 3001n });
+      await t.proc.signal(p.id, 'webhook');
+      const r = await t.get(p.id);
+      expect(r.status).toBe('VALIDATING');
+      expect(r.needsReview).toBe(true);
+      expect(r.lastError).toBe('amount_above_maximum');
+      expect(t.chain.sendMintCalls).toBe(0);
+    });
+
+    it('(c) on-chain config read failing is transient: stays VALIDATING, later mints', async () => {
+      const t = await setup();
+      t.chain.configErrors.push(new TransientChainError('chain operation failed (getAccountInfo): rpc_timeout'));
+      const p = await t.paid();
+      await t.proc.signal(p.id, 'webhook');
+      let r = await t.get(p.id);
+      expect(r.status).toBe('VALIDATING');
+      expect(r.lastError).toBe('chain_transient:rpc_timeout');
+      r = await t.proc.process(p.id);
+      expect(r.status).toBe('MINTED');
+    });
+  });
+
+  describe('Important 2 (reconciler provider poll outside the queue)', () => {
+    it('a hung OZAV poll for payment A does not delay simulated payment B', async () => {
+      const t = await setup();
+      const a = await t.recharge();
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const origFetch = t.ozav.fetchPayment.bind(t.ozav);
+      t.ozav.fetchPayment = async (id: string) => {
+        if (id === a.providerPaymentId) await gate;
+        return origFetch(id);
+      };
+      const aSignal = t.proc.signal(a.id, 'reconciler');
+
+      const b = await t.proc.createRecharge({ userId: t.user.id, amountCents: 5000n, provider: 'simulated' });
+      const timeout = new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), 5000));
+      const res = await Promise.race([t.proc.simulate(b.id), timeout]);
+      expect(res).not.toBe('timeout');
+      expect((await t.get(b.id)).status).toBe('MINTED');
+      expect((await t.get(a.id)).status).toBe('AWAITING_PAYMENT');
+
+      // A's poll now reports approved: the transition happens inside the queue and A mints.
+      t.ozav.states.set(a.providerPaymentId!, {
+        kind: 'approved',
+        receivedAmountCents: 2500n,
+        truncated: false,
+        metadataPaymentId: a.id,
+      });
+      release();
+      await aSignal;
+      expect((await t.get(a.id)).status).toBe('MINTED');
+    }, 20_000);
+  });
 });

@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { Keypair } from '@solana/web3.js';
 import { mintPda } from '../../src/chain/pdas.js';
 import { setupApp, WARMUP_TIMEOUT_MS, warmup } from '../helpers/http-app.js';
 
@@ -17,6 +18,19 @@ describe('GET /api/ops/status', () => {
       paused: false,
       minterLamports: '1000000000',
       lowSol: false,
+      configOk: true,
+      configIssues: [],
+    });
+  });
+
+  it('flags an on-chain config mismatch (configOk false + configIssues)', async () => {
+    const t = await setupApp();
+    t.chain.config = { ...t.chain.config, minter: Keypair.generate().publicKey, maxMintPerTx: 1000n };
+    const res = await t.api('GET', '/api/ops/status');
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      configOk: false,
+      configIssues: ['minter_mismatch', 'max_mint_per_tx_below_max_recharge'],
     });
   });
 

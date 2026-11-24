@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import {
   buildInitializeInstruction,
+  buildPauserInstruction,
+  programConfigIssues,
   configMatches,
   decodeConfigAccount,
   encodeInitializeData,
@@ -85,5 +88,33 @@ describe('program-client', () => {
     expect(configMatches({ admin: x, minter: m, pauser: p }, { admin: a, minter: m, pauser: p })).toBe(false);
     expect(configMatches({ admin: a, minter: x, pauser: p }, { admin: a, minter: m, pauser: p })).toBe(false);
     expect(configMatches({ admin: a, minter: m, pauser: x }, { admin: a, minter: m, pauser: p })).toBe(false);
+  });
+
+  it('builds pause/unpause with pauser signer and writable config', () => {
+    const pauser = Keypair.generate().publicKey;
+    const idl = JSON.parse(readFileSync(new URL('../../src/chain/idl/mumbuca_plus.json', import.meta.url), 'utf8')) as {
+      instructions: { name: string; discriminator: number[] }[];
+    };
+    for (const name of ['pause', 'unpause'] as const) {
+      const ix = buildPauserInstruction(programId, pauser, name);
+      expect(ix.programId.equals(programId)).toBe(true);
+      expect(ix.keys.map((k) => [k.pubkey.toBase58(), k.isSigner, k.isWritable])).toEqual([
+        [pauser.toBase58(), true, false],
+        [findConfigPda(programId)[0].toBase58(), false, true],
+      ]);
+      expect([...ix.data]).toEqual(idl.instructions.find((i) => i.name === name)!.discriminator);
+    }
+  });
+
+  it('programConfigIssues flags minter mismatch, low max_mint_per_tx and pause', () => {
+    const minter = Keypair.generate().publicKey;
+    const ok = { minter, maxMintPerTx: 2_000_000n, paused: false };
+    expect(programConfigIssues(ok, { minter, maxRechargeCents: 2_000_000n })).toEqual([]);
+    expect(
+      programConfigIssues(
+        { minter: Keypair.generate().publicKey, maxMintPerTx: 1_000n, paused: true },
+        { minter, maxRechargeCents: 2_000_000n },
+      ),
+    ).toEqual(['minter_mismatch', 'max_mint_per_tx_below_max_recharge', 'program_paused']);
   });
 });

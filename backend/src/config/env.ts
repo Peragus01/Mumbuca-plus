@@ -79,6 +79,8 @@ const base = z.object({
     MAX_RECHARGE_CENTS: bigintStr(),
     RECONCILE_INTERVAL_MS: intStr(5000),
     MINT_CONFIRM_TIMEOUT_MS: intStr(60000),
+    /** Per-request timeout for Solana RPC calls (a stalled call would otherwise hold the processing queue). */
+    RPC_TIMEOUT_MS: intStr(12000),
     MAX_MINT_ATTEMPTS: intStr(5),
     LOW_SOL_THRESHOLD_LAMPORTS: bigintStr('100000000'),
   });

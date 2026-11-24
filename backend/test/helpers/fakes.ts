@@ -1,5 +1,8 @@
 import { MintRejectedError, TransientChainError, type TokenGateway, type TxOutcome } from '../../src/chain/token-gateway.js';
+import { Keypair } from '@solana/web3.js';
+import type { ConfigAccount } from '../../src/chain/program-client.js';
 import type { PaymentProvider, ProviderPaymentState } from '../../src/providers/payment-provider.js';
+import { validMinter } from './valid-env.js';
 
 export type Ref = `0x${string}`;
 export type SendBehavior = 'ok' | 'drop' | 'land-then-throw' | 'land-failed' | Error;
@@ -18,6 +21,18 @@ export class FakeChain implements TokenGateway {
   height = 1000n;
   nextSlot = 5000n;
   delayMs = 0;
+  /** On-chain Config as deployed per the runbook (minter = the test env minter). */
+  config: ConfigAccount = {
+    admin: Keypair.generate().publicKey,
+    minter: validMinter.publicKey,
+    pauser: Keypair.generate().publicKey,
+    mint: Keypair.generate().publicKey,
+    cap: 1_000_000_000n,
+    maxMintPerTx: 2_000_000n,
+    totalMinted: 0n,
+    paused: false,
+  };
+  configErrors: Error[] = [];
 
   private land(recipient: string, units: bigint, ref: string): string {
     const signature = `sig_${this.sendMintCalls}`;
@@ -73,7 +88,12 @@ export class FakeChain implements TokenGateway {
     return 10n ** 9n;
   }
   async isPaused() {
-    return false;
+    return (await this.programConfig()).paused;
+  }
+  async programConfig() {
+    const e = this.configErrors.shift();
+    if (e) throw e;
+    return this.config;
   }
 }
 

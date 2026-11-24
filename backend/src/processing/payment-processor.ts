@@ -2,7 +2,13 @@ import type { Env } from '../config/env.js';
 import { centsToUnits, paymentRefFor } from '../domain/money.js';
 import { rechargeLimits, type Payment, type PaymentStatus, type ProviderName } from '../domain/payment.js';
 import { parseSolanaAddress } from '../domain/solana-address.js';
-import { MintRejectedError, TransientChainError, type TokenGateway, type TxOutcome } from '../chain/token-gateway.js';
+import {
+  MintRejectedError,
+  TransientChainError,
+  type MintRejectReason,
+  type TokenGateway,
+  type TxOutcome,
+} from '../chain/token-gateway.js';
 import { ProviderUnavailableError, type ProviderRegistry } from '../providers/payment-provider.js';
 import type { PaymentPatch, PaymentRepository } from '../repositories/payment-repository.js';
 import type { UserRepository } from '../repositories/user-repository.js';
@@ -65,6 +71,11 @@ type Step = 'continue' | 'stop';
 
 /** Upper bound on state steps per run (the happy path needs 4). */
 const MAX_STEPS = 12;
+/** Program rejections caused by deployment/configuration: keep APPROVED and retry (Ruling R12). */
+const WAIT_ON_REJECTION: Partial<Record<MintRejectReason, string>> = {
+  Unauthorized: 'program_unauthorized',
+  UnknownProgramError: 'program_error',
+};
 const OPEN: readonly PaymentStatus[] = ['AWAITING_PAYMENT', 'RECEIVED', 'VALIDATING', 'APPROVED', 'MINT_PENDING'];
 
 /**
@@ -134,6 +145,12 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
     return 'stop';
   }
 
+  async function aboveMaximum(p: Payment, received: bigint): Promise<Step> {
+    log.warn({ paymentId: p.id }, 'received amount above maximum; needs review');
+    await payments.patch(p.id, { needsReview: true, lastError: 'amount_above_maximum', receivedAmountCents: received });
+    return 'stop';
+  }
+
   // ---- VALIDATING ----
   async function validate(p: Payment): Promise<Step> {
     const provider = providers[p.provider];
@@ -166,9 +183,20 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
       case 'approved': {
         const received = st.receivedAmountCents;
         if (st.metadataPaymentId !== null && st.metadataPaymentId !== p.id) return fail(p, 'metadata_mismatch');
-        if (received < rechargeLimits(p.provider, env).minCents) {
+        const limits = rechargeLimits(p.provider, env);
+        if (received < limits.minCents) {
           return fail(p, 'amount_below_minimum', { receivedAmountCents: received });
         }
+        // Above our maximum or the program's max_mint_per_tx: never mint, never FAIL a paid
+        // payment — park it for the operator (needsReview).
+        if (received > limits.maxCents) return aboveMaximum(p, received);
+        let maxMintPerTx: bigint;
+        try {
+          maxMintPerTx = (await token.programConfig()).maxMintPerTx;
+        } catch (e) {
+          return bump(p, e);
+        }
+        if (centsToUnits(received) > maxMintPerTx) return aboveMaximum(p, received);
         if ((await walletOf(p.userId)) === null) return fail(p, 'wallet_not_found', { receivedAmountCents: received });
         const amountMismatch = received !== p.requestedAmountCents;
         if (amountMismatch) log.warn({ paymentId: p.id }, 'received amount differs from requested');
@@ -226,6 +254,14 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
         }
         // A rejection may still hide a duplicate: the receipt is the source of truth.
         if (await token.isPaymentRefUsed(ref)) return await recover(p, ref);
+        // Deployment/configuration problems (wrong minter, unexpected program error): the operator
+        // can fix them, so wait like Paused instead of counting toward FAILED.
+        const waitCode = WAIT_ON_REJECTION[e.reason];
+        if (waitCode) {
+          log.warn({ paymentId: p.id, error: 'MintRejectedError', reason: e.reason }, 'mint rejected by program configuration; will retry');
+          await payments.patch(p.id, { lastError: waitCode });
+          return 'stop';
+        }
         // Counted apart from `attempts` (transient streak), so an outage never brings a paid payment closer to FAILED.
         const mintRejections = p.mintRejections + 1;
         const code = errorCode(e);
@@ -323,25 +359,34 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
   }
 
   async function signal(id: string, source: SignalSource): Promise<void> {
-    // Runs as its own queued job (not joined) so the AWAITING → RECEIVED check and the advance
-    // happen atomically with respect to any other processing.
-    await enqueue(async () => {
+    if (source === 'reconciler') {
+      // Read-only provider poll OUTSIDE the queue: a slow or hung partner must not hold up
+      // webhook/simulate/reprocess of other payments. Only a non-pending answer enqueues work.
       const p = await mustFind(id);
       if (p.status === 'AWAITING_PAYMENT') {
         if (!p.providerPaymentId) {
           log.warn({ paymentId: id, source }, 'signal ignored: payment has no provider charge');
           return;
         }
-        if (source === 'reconciler') {
-          const provider = providers[p.provider];
-          if (!provider) return;
-          try {
-            const st = await provider.fetchPayment(p.providerPaymentId);
-            if (st.kind === 'pending') return;
-          } catch (e) {
-            log.warn({ paymentId: id, error: errorClass(e), code: errorCode(e) }, 'reconciler fetch failed');
-            return;
-          }
+        const provider = providers[p.provider];
+        if (!provider) return;
+        try {
+          const st = await provider.fetchPayment(p.providerPaymentId);
+          if (st.kind === 'pending') return;
+        } catch (e) {
+          log.warn({ paymentId: id, error: errorClass(e), code: errorCode(e) }, 'reconciler fetch failed');
+          return;
+        }
+      }
+    }
+    // Own queued job (not joined): the status is re-read here, so the AWAITING → RECEIVED
+    // transition and the advance are atomic with respect to any other processing.
+    await enqueue(async () => {
+      const p = await mustFind(id);
+      if (p.status === 'AWAITING_PAYMENT') {
+        if (!p.providerPaymentId) {
+          log.warn({ paymentId: id, source }, 'signal ignored: payment has no provider charge');
+          return;
         }
         await move(p, 'RECEIVED', undefined, { source });
       }

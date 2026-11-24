@@ -6,6 +6,7 @@ import {
   classifySimulationFailure,
   classifyThrown,
   createSolanaTokenGateway,
+  timeoutFetch,
 } from '../../src/chain/token-gateway.js';
 import { configPda, mintPda, receiptPda } from '../../src/chain/pdas.js';
 
@@ -173,5 +174,45 @@ describe('pdas', () => {
   it('rejects a malformed paymentRef', () => {
     expect(() => receiptPda(programId, '0x1234' as `0x${string}`)).toThrow();
     expect(() => receiptPda(programId, `0x${'zz'.repeat(32)}` as `0x${string}`)).toThrow();
+  });
+});
+
+describe('RPC timeout (Important 1)', () => {
+  it('a hung RPC call is aborted after rpcTimeoutMs and surfaces as transient rpc_timeout', async () => {
+    let calls = 0;
+    const hanging = ((_url: unknown, init?: RequestInit) => {
+      calls++;
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
+      });
+    }) as typeof fetch;
+    const gw = createSolanaTokenGateway({
+      rpcUrl: 'http://127.0.0.1:1/path-with-SECRET-token',
+      programId: PROGRAM,
+      minterSecretKey: Keypair.generate().secretKey,
+      rpcTimeoutMs: 100,
+      fetch: hanging,
+    });
+    const started = Date.now();
+    const err = await gw.isPaused().catch((e: unknown) => e);
+    expect(Date.now() - started).toBeLessThan(3000);
+    expect(err).toBeInstanceOf(TransientChainError);
+    expect((err as Error).message).toMatch(/rpc_timeout/);
+    expect((err as Error).message).not.toContain('SECRET');
+    expect(calls).toBe(1);
+  }, 10_000);
+
+  it('timeoutFetch keeps a caller abort signal working', async () => {
+    const seen: (AbortSignal | null | undefined)[] = [];
+    const base = ((_u: unknown, init?: RequestInit) => {
+      seen.push(init?.signal);
+      return new Promise((_r, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal!.reason)));
+    }) as typeof fetch;
+    const f = timeoutFetch(60_000, base);
+    const ctrl = new AbortController();
+    const p = f('http://x', { method: 'POST', signal: ctrl.signal });
+    ctrl.abort(new Error('caller abort'));
+    await expect(p).rejects.toThrow('caller abort');
+    expect(seen[0]).toBeDefined();
   });
 });

@@ -19,7 +19,7 @@ import {
   receiptPda,
   token2022Ata,
 } from './pdas.js';
-import { decodeConfigAccount } from './program-client.js';
+import { decodeConfigAccount, type ConfigAccount } from './program-client.js';
 
 export type MintRejectReason =
   | 'Unauthorized'
@@ -43,6 +43,8 @@ export interface TokenGateway {
   balanceOf(owner: string): Promise<bigint>;
   minterNativeBalance(): Promise<bigint>;
   isPaused(): Promise<boolean>;
+  /** On-chain Config account (minter, max_mint_per_tx, paused, ...). */
+  programConfig(): Promise<ConfigAccount>;
 }
 
 /** Retryable: network/RPC failure, timeout, expired blockhash, missing SOL for fee/rent. Message never carries the RPC URL or keys. */
@@ -164,6 +166,21 @@ export function buildMintForPaymentInstruction(
   });
 }
 
+export const DEFAULT_RPC_TIMEOUT_MS = 12_000;
+
+/**
+ * fetch with a per-request timeout (composed with any caller signal). web3.js would otherwise use
+ * the runtime default (~300 s), and a stalled RPC call would hold the process-wide queue.
+ * The abort surfaces as a "timeout"/"aborted" error, which classifyThrown maps to rpc_timeout.
+ */
+export function timeoutFetch(timeoutMs: number, base: typeof fetch = (input, init) => fetch(input, init)): typeof fetch {
+  return ((input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+    return base(input, { ...init, signal });
+  }) as typeof fetch;
+}
+
 const POLL_MS = 400;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -172,9 +189,17 @@ export function createSolanaTokenGateway(opts: {
   programId: string;
   minterSecretKey: Uint8Array;
   commitment?: 'confirmed';
+  /** Per-request RPC timeout (default DEFAULT_RPC_TIMEOUT_MS). */
+  rpcTimeoutMs?: number;
+  /** Underlying fetch (tests); always wrapped with the timeout. */
+  fetch?: typeof fetch;
 }): TokenGateway {
   const commitment = opts.commitment ?? 'confirmed';
-  const connection = new Connection(opts.rpcUrl, { commitment, disableRetryOnRateLimit: true });
+  const connection = new Connection(opts.rpcUrl, {
+    commitment,
+    disableRetryOnRateLimit: true,
+    fetch: timeoutFetch(opts.rpcTimeoutMs ?? DEFAULT_RPC_TIMEOUT_MS, opts.fetch),
+  });
   const programId = new PublicKey(opts.programId);
   const minter = Keypair.fromSecretKey(opts.minterSecretKey);
 
@@ -209,6 +234,16 @@ export function createSolanaTokenGateway(opts: {
       return { status: 'confirmed', slot: BigInt(st.slot) };
     }
     return null; // processed only: not yet confirmed
+  }
+
+  async function readConfig(): Promise<ConfigAccount> {
+    const info = await rpc('getAccountInfo', () => connection.getAccountInfo(configPda(programId), commitment));
+    if (!info) throw new TransientChainError('program config account not found');
+    try {
+      return decodeConfigAccount(info.data);
+    } catch {
+      throw new TransientChainError('program config account invalid');
+    }
   }
 
   async function blockHeight(): Promise<bigint> {
@@ -324,9 +359,9 @@ export function createSolanaTokenGateway(opts: {
     },
 
     async isPaused() {
-      const info = await rpc('getAccountInfo', () => connection.getAccountInfo(configPda(programId), commitment));
-      if (!info) throw new TransientChainError('program config account not found');
-      return decodeConfigAccount(info.data).paused;
+      return (await readConfig()).paused;
     },
+
+    programConfig: readConfig,
   };
 }

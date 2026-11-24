@@ -6,10 +6,14 @@ export type Db = {
   query<T = any>(text: string, params?: unknown[]): Promise<{ rows: T[] }>;
 };
 
+export const STATEMENT_TIMEOUT_MS = 15_000;
+
 export function createPgDb(url: string, ssl: boolean): Db & { end(): Promise<void> } {
   const pool = new pg.Pool({
     connectionString: url,
     ssl: ssl ? { rejectUnauthorized: false } : undefined,
+    // A stuck query must not hold the process-wide processing queue forever.
+    statement_timeout: STATEMENT_TIMEOUT_MS,
   });
   return {
     async query<T = any>(text: string, params?: unknown[]) {
