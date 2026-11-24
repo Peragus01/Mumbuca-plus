@@ -14,6 +14,8 @@ export interface RechargeDialogProps {
   /** Operator mode: lets the operator mark a sandbox/simulated charge as paid from the dialog. */
   allowSimulate?: boolean;
   pollIntervalMs?: number;
+  /** Dialog title before the charge exists. Defaults to the visitor copy; operator mode keeps "Recarregar Mum+". */
+  title?: string;
 }
 
 function createErrorMessage(e: unknown): string {
@@ -77,6 +79,7 @@ export function RechargeDialog({
   onCompleted,
   allowSimulate = false,
   pollIntervalMs = 2000,
+  title = allowSimulate ? 'Recarregar Mum+' : 'Comprar Mum+ via Pix',
 }: RechargeDialogProps) {
   const amountId = useId();
   const codeId = useId();
@@ -167,7 +170,7 @@ export function RechargeDialog({
 
   if (!payment) {
     return (
-      <Modal title="Recarregar Mum+" onClose={onClose}>
+      <Modal title={title} onClose={onClose}>
         <form className="stack" onSubmit={submit} noValidate>
           <p className="muted">
             Você paga em reais via Pix e recebe o mesmo valor em Mum+ na sua carteira. R$ 1,00 = 1,00 Mum+.
@@ -217,7 +220,7 @@ export function RechargeDialog({
 
         {status === 'AWAITING_PAYMENT' && payment.pixBrCode && (
           <div className="pix">
-            <div className="pix__qr">
+            <div className="pix__qr qr-frame">
               <QRCodeSVG value={payment.pixBrCode} size={192} level="M" marginSize={2} role="img" aria-label="QR Code do Pix" />
             </div>
             <p className="muted center">Abra o app do seu banco, escolha Pix e escaneie o código ou use o copia e cola.</p>

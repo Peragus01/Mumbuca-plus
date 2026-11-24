@@ -142,4 +142,16 @@ describe('RechargeDialog', () => {
     await sleep(40);
     expect(fetchMock.mock.calls.length).toBe(calls);
   });
+  it('renders the QR inside a light frame', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      init?.method === 'POST' ? json(201, payment()) : json(200, payment()),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<RechargeDialog userId={USER_ID} provider="ozav" onClose={() => {}} pollIntervalMs={1000} />);
+
+    fillAndSubmit('50');
+
+    const qr = await screen.findByLabelText('QR Code do Pix');
+    expect(qr.closest('.qr-frame')).not.toBeNull();
+  });
 });

@@ -104,9 +104,65 @@ describe('CitizenView', () => {
     lateHistoryA.resolve(json([payment(A, { mintAmountUnits: '999900' })]));
     await new Promise((r) => setTimeout(r, 30));
 
-    expect(screen.getByText(/Olá,\s*Bia/)).toBeTruthy();
+    expect(screen.getByText(/Bem-vindo a Maricá,\s*Bia/)).toBeTruthy();
     expect(screen.getByText('25,00 Mum+')).toBeTruthy();
     expect(screen.getByText('+ 25,00 Mum+')).toBeTruthy();
     expect(screen.queryByText(/9\.999,00 Mum\+/)).toBeNull();
+  });
+  describe('C2 visitor wallet', () => {
+    function stubDefault() {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (url === '/api/users') return json(users);
+          if (url.endsWith('/balance')) return json({ balanceUnits: '5000' });
+          if (url.startsWith('/api/payments')) return json([]);
+          return json({ error: 'not_found' }, 404);
+        }),
+      );
+    }
+
+    it('shows the on-chain chip and parity', async () => {
+      stubDefault();
+      render(<CitizenView />);
+      expect(await screen.findByText('on-chain · Solana')).toBeTruthy();
+      expect(screen.getByText('1 Mum+ = R$ 1,00')).toBeTruthy();
+    });
+
+    it('wallet link opens the address on Solana Explorer devnet', async () => {
+      stubDefault();
+      render(<CitizenView />);
+      const link = (await screen.findByRole('link', { name: /^Ver na rede/ })) as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe(`https://explorer.solana.com/address/${users[0]!.walletAddress}?cluster=devnet`);
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel') ?? '').toContain('noopener');
+    });
+
+    it('shows visitor copy and impact chips', async () => {
+      stubDefault();
+      render(<CitizenView />);
+      expect(await screen.findByText(/Bem-vindo a Maricá/)).toBeTruthy();
+      expect(screen.getByText('Seu saldo para gastar em Maricá')).toBeTruthy();
+      expect(screen.getByText(/Descontos e benefícios na rede de Maricá/)).toBeTruthy();
+      expect(screen.getByText(/Parte do lucro financia cinema e cultura na cidade/)).toBeTruthy();
+      expect(screen.queryByText(/Comércio local fortalecido/)).toBeNull();
+    });
+
+    it('shows the Benefícios em Maricá section', async () => {
+      stubDefault();
+      render(<CitizenView />);
+      expect(await screen.findByRole('heading', { name: 'Benefícios em Maricá' })).toBeTruthy();
+      for (const title of ['Gastronomia', 'Hospedagem', 'Cultura e cinema', 'Comércio local']) {
+        expect(screen.getByText(title)).toBeTruthy();
+      }
+      expect(screen.getAllByText('exemplo').length).toBeGreaterThanOrEqual(4);
+      expect(screen.getByText('Benefícios ilustrativos da proposta Mumbuca+.')).toBeTruthy();
+    });
+
+    it('primary button reads Comprar Mum+', async () => {
+      stubDefault();
+      render(<CitizenView />);
+      expect(await screen.findByRole('button', { name: /Comprar Mum\+/ })).toBeTruthy();
+    });
   });
 });

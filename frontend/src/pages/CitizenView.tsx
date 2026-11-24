@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { api, type PaymentDTO, type UserDTO } from '../api';
+import { BenefitsSection } from '../components/BenefitsSection';
 import { CopyButton } from '../components/CopyButton';
 import { RechargeDialog } from '../components/RechargeDialog';
 import { StatusBadge } from '../components/StatusBadge';
@@ -85,13 +86,20 @@ export function CitizenView() {
 
       {user && (
         <section className="balance-card" aria-labelledby="balance-title">
-          <p className="balance-card__greeting">Olá, {user.displayName.split(' ')[0]}</p>
+          <div className="balance-card__top">
+            <p className="balance-card__greeting">Bem-vindo a Maricá, {user.displayName.split(' ')[0]}</p>
+            <span className="chip chip-onchain">
+              <span className="chip__dot" aria-hidden="true" />
+              on-chain · Solana
+            </span>
+          </div>
           <h2 id="balance-title" className="balance-card__label">
-            Saldo disponível
+            Seu saldo para gastar em Maricá
           </h2>
-          <p className="balance-card__value" aria-live="polite">
+          <p className="balance-amount" aria-live="polite">
             {balance.state === 'ok' ? formatMum(balance.units) : balance.state === 'loading' ? '…' : 'Indisponível'}
           </p>
+          <p className="balance-card__parity">1 Mum+ = R$ 1,00</p>
           {balance.state === 'error' && <p className="balance-card__note">Não conseguimos consultar a rede agora.</p>}
           <div className="balance-card__wallet">
             <span className="balance-card__wallet-label">Carteira Solana (Phantom)</span>
@@ -100,26 +108,46 @@ export function CitizenView() {
               <CopyButton text={user.walletAddress} label="Copiar endereço" className="button button--on-brand button--sm" />
             </span>
           </div>
-          <button type="button" className="button button--accent button--lg" onClick={() => setRecharging(true)}>
-            Recarregar
-          </button>
+          <div className="balance-card__actions">
+            <button type="button" className="btn-primary button--lg" onClick={() => setRecharging(true)}>
+              <span aria-hidden="true">＋</span> Comprar Mum+
+            </button>
+            <a
+              className="btn-secondary button--lg"
+              href={`https://explorer.solana.com/address/${encodeURIComponent(user.walletAddress)}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Ver na rede <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+          <ul className="impact-chips" aria-label="Por que usar Mum+">
+            <li className="chip chip--impact">
+              <span aria-hidden="true">🎟️</span> Descontos e benefícios na rede de Maricá
+            </li>
+            <li className="chip chip--impact">
+              <span aria-hidden="true">🎬</span> Parte do lucro financia cinema e cultura na cidade
+            </li>
+          </ul>
         </section>
       )}
 
-      <section className="card" aria-labelledby="history-title">
+      <BenefitsSection />
+
+      <section className="card history-card" aria-labelledby="history-title">
         <h2 id="history-title" className="card__title">
           Histórico
         </h2>
         {history === null ? (
           <p className="muted" role="status">Carregando…</p>
         ) : history.length === 0 ? (
-          <p className="muted">Nenhuma recarga ainda. Toque em Recarregar para fazer a primeira.</p>
+          <p className="muted">Nenhuma compra ainda. Toque em Comprar Mum+ para fazer a primeira.</p>
         ) : (
           <ul className="history">
             {history.map((p) => (
               <li key={p.id} className="history__item">
                 <div className="history__main">
-                  <span className="history__title">Recarga via Pix</span>
+                  <span className="history__title">Compra de Mum+ via Pix</span>
                   <span className="history__date muted small">{formatDateTime(p.createdAt)}</span>
                 </div>
                 <div className="history__side">

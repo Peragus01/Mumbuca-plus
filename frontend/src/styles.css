@@ -1229,6 +1229,147 @@ textarea.code {
   place-items: center;
 }
 
+/* ---------- C2 · Minha carteira (visitante) ---------- */
+
+.balance-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.balance-card__top .balance-card__greeting {
+  color: var(--text);
+  font-size: 1.05rem;
+  min-width: 0;
+}
+.balance-card__parity {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.balance-card__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.balance-card__actions > * {
+  flex: 1 1 160px;
+}
+.balance-card .balance-card__actions .button--lg {
+  margin-top: 0;
+}
+
+/* Selos de impacto: o texto quebra linha (não cabem numa linha a 375px). */
+.impact-chips {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip--impact {
+  white-space: normal;
+  color: var(--text);
+  background: rgb(255 210 63 / 8%);
+  border-color: rgb(255 210 63 / 28%);
+  border-radius: 12px;
+  padding: 6px 12px;
+  line-height: 1.35;
+}
+
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.benefits__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.benefit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 12px 12px;
+  background: var(--surface-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.benefit:hover {
+  border-color: var(--yellow-line);
+  transform: translateY(-1px);
+}
+.benefit__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.benefit__title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+.benefit__perk {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--neon);
+  line-height: 1.3;
+}
+.benefit__tag {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.benefits__note {
+  text-align: center;
+}
+
+/* Moldura clara do QR Code do Pix: fundo branco e padding >= 12px. */
+.qr-frame {
+  align-self: center;
+  background: #ffffff;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 14px;
+  line-height: 0;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 40%);
+}
+
+@media (max-width: 640px) {
+  .benefits__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .benefit {
+    transition: none;
+  }
+  .benefit:hover {
+    transform: none;
+  }
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 640px) {
