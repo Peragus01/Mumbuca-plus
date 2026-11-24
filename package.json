@@ -2,8 +2,16 @@
   "name": "mumbuca-plus",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["backend"],
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "dev:api": "cross-env NODE_ENV=development npm run dev -w backend",
+    "dev:web": "npm run dev -w frontend"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
