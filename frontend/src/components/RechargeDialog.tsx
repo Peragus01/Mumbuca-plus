@@ -14,7 +14,7 @@ export interface RechargeDialogProps {
   /** Operator mode: lets the operator mark a sandbox/simulated charge as paid from the dialog. */
   allowSimulate?: boolean;
   pollIntervalMs?: number;
-  /** Dialog title before the charge exists. Defaults to the visitor copy; operator mode keeps "Recarregar Mum+". */
+  /** Dialog title before the charge exists. Defaults to "Comprar Mum+ via Pix" (visitor) or "Recarregar Mum+" (operator mode). */
   title?: string;
 }
 
@@ -31,6 +31,27 @@ function createErrorMessage(e: unknown): string {
   return 'Algo deu errado. Tente novamente.';
 }
 
+/** Visitor mode speaks of a purchase ("compra"); operator mode keeps the "recarga" wording. */
+const COPY = {
+  visitor: {
+    title: 'Comprar Mum+ via Pix',
+    amountLabel: 'Valor da compra (R$)',
+    chargeTitle: 'Compra de',
+    done: 'Compra concluída',
+    progress: 'Andamento da compra',
+    failed: 'Não foi possível concluir a compra',
+  },
+  operator: {
+    title: 'Recarregar Mum+',
+    amountLabel: 'Valor da recarga (R$)',
+    chargeTitle: 'Recarga de',
+    done: 'Recarga concluída',
+    progress: 'Andamento da recarga',
+    failed: 'Não foi possível concluir a recarga',
+  },
+} as const;
+type Copy = (typeof COPY)[keyof typeof COPY];
+
 /** How many timeline steps are complete for a status (out of 4). */
 const PROGRESS: Record<PaymentStatus, number> = {
   AWAITING_PAYMENT: 1,
@@ -42,7 +63,7 @@ const PROGRESS: Record<PaymentStatus, number> = {
   FAILED: 0,
 };
 
-function Timeline({ status }: { status: PaymentStatus }) {
+function Timeline({ status, copy }: { status: PaymentStatus; copy: Copy }) {
   const steps = [
     'Pix gerado',
     status === 'AWAITING_PAYMENT'
@@ -51,11 +72,11 @@ function Timeline({ status }: { status: PaymentStatus }) {
         ? 'Confirmando pagamento'
         : 'Pagamento confirmado',
     'Emitindo Mum+',
-    'Recarga concluída',
+    copy.done,
   ];
   const done = PROGRESS[status];
   return (
-    <ol className="timeline" aria-label="Andamento da recarga">
+    <ol className="timeline" aria-label={copy.progress}>
       {steps.map((label, i) => {
         const state = i < done ? 'done' : i === done ? 'active' : 'todo';
         return (
@@ -79,8 +100,9 @@ export function RechargeDialog({
   onCompleted,
   allowSimulate = false,
   pollIntervalMs = 2000,
-  title = allowSimulate ? 'Recarregar Mum+' : 'Comprar Mum+ via Pix',
+  title,
 }: RechargeDialogProps) {
+  const copy = allowSimulate ? COPY.operator : COPY.visitor;
   const amountId = useId();
   const codeId = useId();
   const errorId = useId();
@@ -170,13 +192,13 @@ export function RechargeDialog({
 
   if (!payment) {
     return (
-      <Modal title={title} onClose={onClose}>
+      <Modal title={title ?? copy.title} onClose={onClose}>
         <form className="stack" onSubmit={submit} noValidate>
           <p className="muted">
             Você paga em reais via Pix e recebe o mesmo valor em Mum+ na sua carteira. R$ 1,00 = 1,00 Mum+.
           </p>
           <div className="field">
-            <label htmlFor={amountId}>Valor da recarga (R$)</label>
+            <label htmlFor={amountId}>{copy.amountLabel}</label>
             <div className="money-input">
               <span aria-hidden="true">R$</span>
               <input
@@ -214,9 +236,9 @@ export function RechargeDialog({
   const canSimulate = allowSimulate && status === 'AWAITING_PAYMENT' && payment.origin !== 'OZAV live';
 
   return (
-    <Modal title={`Recarga de ${formatBRL(payment.requestedAmountCents)}`} onClose={onClose}>
+    <Modal title={`${copy.chargeTitle} ${formatBRL(payment.requestedAmountCents)}`} onClose={onClose}>
       <div className="stack">
-        {status !== 'FAILED' && <Timeline status={status} />}
+        {status !== 'FAILED' && <Timeline status={status} copy={copy} />}
 
         {status === 'AWAITING_PAYMENT' && payment.pixBrCode && (
           <div className="pix">
@@ -257,7 +279,7 @@ export function RechargeDialog({
 
         {status === 'MINTED' && (
           <div className="result result--success" role="status">
-            <p className="result__title">Recarga concluída</p>
+            <p className="result__title">{copy.done}</p>
             <p>
               <strong>{formatMum(payment.mintAmountUnits ?? received)}</strong> creditados na sua carteira.
             </p>
@@ -271,7 +293,7 @@ export function RechargeDialog({
 
         {status === 'FAILED' && (
           <div className="result result--danger" role="alert">
-            <p className="result__title">Não foi possível concluir a recarga</p>
+            <p className="result__title">{copy.failed}</p>
             <p>Se o valor foi debitado, ele será analisado pela nossa equipe. Nenhuma ação é necessária agora.</p>
           </div>
         )}

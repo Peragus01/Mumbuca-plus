@@ -44,8 +44,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function fillAndSubmit(value: string) {
-  fireEvent.change(screen.getByLabelText(/Valor da recarga/i), { target: { value } });
+// Visitor mode (default) uses purchase wording; operator mode (allowSimulate) keeps "recarga".
+function fillAndSubmit(value: string, label: RegExp = /Valor da compra/i) {
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
   fireEvent.click(screen.getByRole('button', { name: /Gerar Pix/i }));
 }
 
@@ -100,6 +101,10 @@ describe('RechargeDialog', () => {
     const link = (await screen.findByRole('link', { name: /Solana Explorer/i })) as HTMLAnchorElement;
     expect(link.href).toBe(`https://explorer.solana.com/tx/${SIG}?cluster=devnet`);
     expect(screen.getByText(/50,00 Mum\+/)).toBeTruthy();
+    expect(screen.getByText('Compra de R$ 50,00')).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Andamento da compra' })).toBeTruthy();
+    expect(screen.getAllByText('Compra concluída').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Recarga/)).toBeNull();
     expect(onCompleted).toHaveBeenCalledTimes(1);
 
     // Polling stops at the terminal state.
@@ -118,7 +123,7 @@ describe('RechargeDialog', () => {
 
     fillAndSubmit('50');
 
-    expect(await screen.findByText(/Não foi possível concluir a recarga/)).toBeTruthy();
+    expect(await screen.findByText(/Não foi possível concluir a compra/)).toBeTruthy();
     expect(screen.queryByText(/amount_below_minimum|token_paused/)).toBeNull();
 
     const calls = fetchMock.mock.calls.length;
@@ -153,5 +158,20 @@ describe('RechargeDialog', () => {
 
     const qr = await screen.findByLabelText('QR Code do Pix');
     expect(qr.closest('.qr-frame')).not.toBeNull();
+  });
+  it('keeps the recarga wording in operator mode', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      init?.method === 'POST' ? json(201, payment()) : json(200, payment()),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<RechargeDialog userId={USER_ID} provider="simulated" allowSimulate onClose={() => {}} pollIntervalMs={1000} />);
+
+    expect(screen.getByText('Recarregar Mum+')).toBeTruthy();
+    fillAndSubmit('50', /Valor da recarga/i);
+
+    expect(await screen.findByText('Recarga de R$ 50,00')).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Andamento da recarga' })).toBeTruthy();
+    expect(screen.getByText('Recarga concluída')).toBeTruthy();
+    expect(screen.queryByText(/Compra/)).toBeNull();
   });
 });

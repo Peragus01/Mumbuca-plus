@@ -119,6 +119,7 @@ export function CitizenView() {
               rel="noopener noreferrer"
             >
               Ver na rede <span aria-hidden="true">↗</span>
+              <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </div>
           <ul className="impact-chips" aria-label="Por que usar Mum+">

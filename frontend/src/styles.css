@@ -1304,13 +1304,6 @@ textarea.code {
   background: var(--surface-gradient);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease;
-}
-.benefit:hover {
-  border-color: var(--yellow-line);
-  transform: translateY(-1px);
 }
 .benefit__icon {
   font-size: 1.5rem;
@@ -1359,14 +1352,6 @@ textarea.code {
 @media (max-width: 640px) {
   .benefits__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .benefit {
-    transition: none;
-  }
-  .benefit:hover {
-    transform: none;
   }
 }
 

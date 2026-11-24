@@ -135,6 +135,8 @@ describe('CitizenView', () => {
       const link = (await screen.findByRole('link', { name: /^Ver na rede/ })) as HTMLAnchorElement;
       expect(link.getAttribute('href')).toBe(`https://explorer.solana.com/address/${users[0]!.walletAddress}?cluster=devnet`);
       expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.textContent).toContain('(abre em nova aba)');
+      expect(screen.getByRole('link', { name: /Ver na rede.*\(abre em nova aba\)/ })).toBe(link);
       expect(link.getAttribute('rel') ?? '').toContain('noopener');
     });
 
