@@ -122,7 +122,7 @@ export class PaymentRepository {
 
   async attachCharge(
     id: string,
-    charge: { providerPaymentId: string; pixBrCode: string; pixExpiresAt: Date },
+    charge: { providerPaymentId: string; pixBrCode: string | null; pixExpiresAt: Date | null },
   ): Promise<Payment> {
     const { rows } = await this.db.query<PaymentRow>(
       `update payments set provider_payment_id = $2, pix_br_code = $3, pix_expires_at = $4, updated_at = now()
