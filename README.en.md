@@ -379,7 +379,7 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 - On-chain proof of reserves.
 - Mainnet.
 
-**Status:** the design is approved and implementation is in progress. See the [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) and the [implementation plan](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md). Both are in Portuguese.
+**Status:** implementation is complete; the on-chain devnet deploy and the live rehearsal are still pending. See the [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) and the [implementation plan](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md). Both are in Portuguese.
 
 ## 14. Repository layout and documentation
 
@@ -394,7 +394,44 @@ docs/
   demo-runbook.md      demo script and contingencies
 ```
 
-Instructions for running locally and deploying will be added here once implementation is complete.
+### Prerequisites
+
+- Node.js 22 and npm.
+- A reachable PostgreSQL (local or Railway).
+- For the on-chain program: WSL (Ubuntu) with the Solana CLI and Anchor, and the Rust toolchain.
+- Environment variables: copy `backend/.env.example` to `backend/.env` and fill it in (never commit that file).
+
+### Run locally
+
+```bash
+npm ci
+npm run dev:api   # API at http://localhost:3000
+npm run dev:web   # dashboard at http://localhost:5173 (proxies to the API)
+```
+
+Production build (the API serves the compiled dashboard). Over local http, use `NODE_ENV=development` so the session cookie does not require HTTPS:
+
+```bash
+npm ci && npm run build && npm start
+```
+
+### Tests
+
+```bash
+npm test -w backend
+npm test -w frontend
+npm run test:chain -w backend   # integration against solana-test-validator in WSL
+# Anchor program, in WSL, inside anchor/:
+cargo test
+```
+
+### Deploy the program to devnet
+
+See [docs/solana-deploy.md](docs/solana-deploy.md) (in Portuguese).
+
+### Deploy to Railway and demo
+
+`railway.json` at the root configures build, start and healthcheck. The deploy steps, the eve-of-demo checklist, the presentation script and the contingencies are in [docs/demo-runbook.md](docs/demo-runbook.md) (in Portuguese).
 
 ## 15. References
 
