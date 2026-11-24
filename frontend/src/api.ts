@@ -51,6 +51,9 @@ export interface OpsStatus {
   paused: boolean;
   minterLamports: string;
   lowSol: boolean;
+  /** On-chain deployment check (minter, max_mint_per_tx, pause). Absent on older backends. */
+  configOk?: boolean;
+  configIssues?: string[];
 }
 
 export class ApiError extends Error {

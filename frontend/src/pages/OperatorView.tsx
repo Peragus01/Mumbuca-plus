@@ -6,6 +6,12 @@ import { OriginBadge, StatusBadge } from '../components/StatusBadge';
 import { formatBRL, formatDateTime, formatMum, formatSol, isTerminal, shortAddress } from '../format';
 import { useInterval } from '../hooks';
 
+const CONFIG_ISSUE_TEXT: Record<string, string> = {
+  minter_mismatch: 'config.minter não é a carteira emissora do servidor',
+  max_mint_per_tx_below_max_recharge: 'max_mint_per_tx do programa é menor que a recarga máxima',
+  program_paused: 'programa pausado',
+};
+
 type Ops = { state: 'loading' } | { state: 'ok'; data: OpsStatus } | { state: 'error' };
 
 function OpsPanel({ ops }: { ops: Ops }) {
@@ -23,6 +29,13 @@ function OpsPanel({ ops }: { ops: Ops }) {
       {o.paused && (
         <p className="alert alert--danger" role="alert">
           <strong>Emissão pausada.</strong> O programa está pausado: nenhuma recarga será emitida até ser retomado.
+        </p>
+      )}
+      {o.configOk === false && (
+        <p className="alert alert--danger" role="alert">
+          <strong>Configuração on-chain divergente.</strong> As emissões não vão acontecer até corrigir:{' '}
+          {(o.configIssues ?? []).map((i) => CONFIG_ISSUE_TEXT[i] ?? i).join('; ')}. Pagamentos aprovados aguardam e
+          serão emitidos depois da correção.
         </p>
       )}
       {o.lowSol && (
