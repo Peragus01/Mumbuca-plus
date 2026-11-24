@@ -340,7 +340,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - Prova de reservas on-chain.
 - Rede principal (mainnet).
 
-**Status:** o design está aprovado e a implementação está em andamento. Veja o [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) e o [plano de implementação](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md).
+**Status:** a implementação está completa; o deploy do programa na devnet e o ensaio ao vivo ainda estão pendentes. Veja o [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) e o [plano de implementação](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md).
 
 ## 14. Estrutura do repositório e documentação
 
@@ -355,7 +355,44 @@ docs/
   demo-runbook.md      roteiro da demonstração e contingências
 ```
 
-Instruções para rodar localmente e para implantar serão adicionadas aqui quando a implementação terminar.
+### Pré-requisitos
+
+- Node.js 22 e npm.
+- PostgreSQL acessível (local ou do Railway).
+- Para o programa on-chain: WSL (Ubuntu) com a Solana CLI e o Anchor, e a Rust toolchain.
+- Variáveis de ambiente: copie `backend/.env.example` para `backend/.env` e preencha (nunca versione esse arquivo).
+
+### Rodar localmente
+
+```bash
+npm ci
+npm run dev:api   # API em http://localhost:3000
+npm run dev:web   # dashboard em http://localhost:5173 (proxy para a API)
+```
+
+Build de produção (a API serve o dashboard compilado). Sobre http local, use `NODE_ENV=development` para o cookie de sessão não exigir HTTPS:
+
+```bash
+npm ci && npm run build && npm start
+```
+
+### Testes
+
+```bash
+npm test -w backend
+npm test -w frontend
+npm run test:chain -w backend   # integração contra solana-test-validator no WSL
+# programa Anchor, no WSL, dentro de anchor/:
+cargo test
+```
+
+### Implantar o programa na devnet
+
+Veja [docs/solana-deploy.md](docs/solana-deploy.md).
+
+### Implantar no Railway e demonstrar
+
+O `railway.json` na raiz configura build, start e healthcheck. O passo a passo do deploy, a checklist da véspera, o roteiro da apresentação e as contingências estão em [docs/demo-runbook.md](docs/demo-runbook.md).
 
 ## 15. Referências
 

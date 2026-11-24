@@ -1,0 +1,34 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { setupApp, WARMUP_TIMEOUT_MS, warmup } from '../helpers/http-app.js';
+
+describe('static frontend', () => {
+  beforeAll(warmup, WARMUP_TIMEOUT_MS);
+
+  it('serves files, falls back to index.html for SPA routes, never for /api or /webhooks', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'mp-static-'));
+    writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Mumbuca+</title>');
+    writeFileSync(path.join(dir, 'app.js'), 'console.log(1)');
+    const t = await setupApp({}, { staticDir: dir });
+    const get = (url: string) => t.app.inject({ method: 'GET', url });
+
+    expect((await get('/')).body).toContain('Mumbuca+');
+    expect((await get('/app.js')).body).toBe('console.log(1)');
+    const spa = await get('/usuarios/123');
+    expect(spa.statusCode).toBe(200);
+    expect(spa.body).toContain('Mumbuca+');
+    const api = await get('/api/nope');
+    expect(api.statusCode).toBe(404);
+    expect(api.json()).toEqual({ error: 'not_found' });
+    expect((await get('/webhooks/nope')).statusCode).toBe(404);
+  });
+
+  it('without staticDir unknown routes are JSON 404', async () => {
+    const t = await setupApp();
+    const res = await t.app.inject({ method: 'GET', url: '/' });
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: 'not_found' });
+  });
+});

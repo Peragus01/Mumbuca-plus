@@ -1,0 +1,693 @@
+{
+  "address": "HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm",
+  "metadata": {
+    "name": "mumbuca_plus",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Mumbuca+ Token-2022 mint with on-chain payment receipts"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "docs": [
+        "Creates the `Config` PDA and the Token-2022 mint (decimals 2, MetadataPointer +",
+        "TokenMetadata). The signer becomes `admin` and pays for every account."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "cap",
+          "type": "u64"
+        },
+        {
+          "name": "max_mint_per_tx",
+          "type": "u64"
+        },
+        {
+          "name": "minter",
+          "type": "pubkey"
+        },
+        {
+          "name": "pauser",
+          "type": "pubkey"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "mint_for_payment",
+      "docs": [
+        "Mints `amount` units to `recipient` for a settled payment. The `PaymentReceipt` PDA",
+        "(`[\"receipt\", payment_ref]`) is created with `init`, so a repeated `payment_ref` fails."
+      ],
+      "discriminator": [
+        38,
+        52,
+        84,
+        59,
+        17,
+        56,
+        241,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "minter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "payment_ref"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient"
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "recipient"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "payment_ref",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "pause",
+      "docs": [
+        "Blocks `mint_for_payment` only; token transfers are untouched."
+      ],
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "pauser",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_max_mint_per_tx",
+      "discriminator": [
+        232,
+        78,
+        160,
+        28,
+        226,
+        221,
+        147,
+        254
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "v",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_minter",
+      "discriminator": [
+        13,
+        170,
+        92,
+        172,
+        137,
+        194,
+        39,
+        2
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_pauser",
+      "discriminator": [
+        22,
+        198,
+        152,
+        61,
+        2,
+        13,
+        145,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "unpause",
+      "discriminator": [
+        169,
+        144,
+        4,
+        38,
+        10,
+        141,
+        188,
+        255
+      ],
+      "accounts": [
+        {
+          "name": "pauser",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "PaymentReceipt",
+      "discriminator": [
+        168,
+        198,
+        209,
+        4,
+        60,
+        235,
+        126,
+        109
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "MintedForPayment",
+      "discriminator": [
+        150,
+        203,
+        66,
+        167,
+        124,
+        130,
+        50,
+        61
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Signer is not authorized for this instruction"
+    },
+    {
+      "code": 6001,
+      "name": "Paused",
+      "msg": "Minting is paused"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6003,
+      "name": "ExceedsMaxPerTx",
+      "msg": "Amount exceeds max_mint_per_tx"
+    },
+    {
+      "code": 6004,
+      "name": "CapExceeded",
+      "msg": "Mint would exceed the cap"
+    },
+    {
+      "code": 6005,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "Config",
+      "docs": [
+        "Global configuration, PDA `[\"config\"]`. Also the mint authority of the Mum+ mint."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "minter",
+            "type": "pubkey"
+          },
+          {
+            "name": "pauser",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "cap",
+            "type": "u64"
+          },
+          {
+            "name": "max_mint_per_tx",
+            "type": "u64"
+          },
+          {
+            "name": "total_minted",
+            "type": "u64"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "mint_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintedForPayment",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "payment_ref",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PaymentReceipt",
+      "docs": [
+        "On-chain dedup of a settled payment, PDA `[\"receipt\", payment_ref]`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "payment_ref",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
