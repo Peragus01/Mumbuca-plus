@@ -8,10 +8,15 @@
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm run start -w backend",
     "dev:api": "cross-env NODE_ENV=development npm run dev -w backend",
     "dev:web": "npm run dev -w frontend"
   },
   "devDependencies": {
     "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
