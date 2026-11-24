@@ -2,7 +2,7 @@
 
 🇧🇷 Português · [🇺🇸 English](README.en.md)
 
-**Infraestrutura de tokenização para moedas sociais: um pagamento em reais, liquidado por um parceiro regulado, vira automaticamente saldo digital rastreável na carteira do cidadão, com entrega condicionada ao pagamento (DvP) e compliance desde o desenho.**
+**Infraestrutura de tokenização para moedas sociais: um pagamento em reais, liquidado por um parceiro regulado, vira automaticamente Mum+ na carteira do visitante, para gastar em Maricá com benefícios e descontos, com entrega condicionada ao pagamento (DvP) e compliance desde o desenho. Na proposta, parte do lucro da operação financia cinema e cultura na cidade.**
 
 > Prova de conceito da proposta **Mumbuca+**, desenvolvida a partir do relatório *"Renda Básica de Cidadania — Mumbuca"* (Faculdade Sebrae, Administração de Empresas, Turma T9, disciplina Empreendedorismo & Impacto Social, 2026). Não é um sistema oficial da Prefeitura de Maricá nem do Banco Comunitário Mumbuca. Roda na **Solana devnet**.
 
@@ -32,6 +32,8 @@
 
 A Mumbuca é a moeda social de Maricá (RJ). Criada em 2013 e gerida pelo Banco Comunitário Mumbuca, ela tem paridade fixa com o real (1 Mumbuca = R$ 1,00) e sustenta a Renda Básica de Cidadania do município. Segundo o relatório, em 2026 o programa atende **mais de 93 mil beneficiários**, paga **230 Mumbucas por mês** e movimenta um orçamento anual **acima de R$ 256 milhões**.
 
+Hoje a Mumbuca circula num arranjo fechado, voltado a quem recebe o benefício. O **Mumbuca+** abre a moeda social para o **público externo**. Turistas e visitantes compram Mum+ via Pix para gastar na rede credenciada de Maricá, com acesso a **benefícios e descontos**. Com isso, o dinheiro de fora entra direto no comércio local. Na proposta, **parte do lucro** da operação é revertida para **cinema e cultura** na cidade.
+
 O relatório aponta gargalos que a tecnologia pode atacar:
 
 | Gargalo (relatório) | Como a tokenização ajuda |
@@ -39,34 +41,44 @@ O relatório aponta gargalos que a tecnologia pode atacar:
 | Processos físicos: cartões plásticos e papel térmico | Saldo e comprovante 100% digitais, verificáveis on-chain |
 | Rastreabilidade e prestação de contas manuais | Cada emissão tem uma assinatura pública, auditável por qualquer pessoa |
 | Arranjo fechado, difícil de integrar | Padrão aberto (SPL Token-2022), integrável a carteiras e instituições de pagamento |
-| Dependência fiscal exclusiva de repasses públicos | Entrada de recursos por instituições de pagamento abre caminho a recargas e parcerias |
+| Dependência fiscal exclusiva de repasses públicos | A venda de Mum+ a visitantes traz recursos de fora para a economia local e gera receita própria, parte dela destinada à cultura |
+| Moeda restrita a residentes e beneficiários | Visitantes compram Mum+ via Pix e usam na mesma rede credenciada, com benefícios e descontos |
 
-O relatório propõe uma **carteira dupla tokenizada**. Este repositório constrói a **fundação técnica** dessa carteira: a ponte automática, auditável e em conformidade entre o dinheiro que entra pelo sistema de pagamentos e o token que chega ao cidadão.
+O relatório propõe uma **carteira dupla tokenizada**. Este repositório constrói a **fundação técnica** dessa carteira: a ponte automática, auditável e em conformidade entre o dinheiro que entra pelo sistema de pagamentos e o token que chega à carteira de quem vai gastar em Maricá.
 
 ## 2. O que o Mumbuca+ faz
 
-1. A cidadã escolhe um valor e faz uma **recarga via Pix**.
+**Para quem:** visitantes e turistas que vão a Maricá. Eles compram Mum+ e ganham **benefícios e descontos** na rede credenciada da cidade, nas categorias:
+- gastronomia;
+- hospedagem;
+- cultura e cinema;
+- comércio local.
+
+Cada compra também apoia a cultura local. Na prova de conceito, os benefícios exibidos no app são **ilustrativos**.
+
+1. O visitante escolhe um valor e **compra Mum+ via Pix**.
 2. O **parceiro de liquidez** recebe os reais, já com KYC, KYB e KYT aplicados na entrada.
 3. O backend do Mumbuca+ **detecta a liquidação** por webhook assinado ou por consulta periódica e **confirma direto na API do parceiro**. Uma notificação sozinha nunca dispara emissão.
 4. Com o pagamento liquidado, o backend executa `mint_for_payment` no programa Solana: **entrega contra pagamento (DvP)**.
-5. Os **Mumbuca+ (Mum+) aparecem na carteira Phantom** da cidadã, 1 Mum+ para cada R$ 1,00 liquidado.
+5. Os **Mumbuca+ (Mum+) aparecem na carteira Phantom** do visitante, 1 Mum+ para cada R$ 1,00 liquidado.
 6. A transação fica **pública e verificável** no Solana Explorer.
 7. Nenhum pagamento gera emissão duplicada, mesmo com reenvios, quedas de rede ou reinícios do servidor.
+8. Com Mum+, o visitante gasta na rede credenciada de Maricá e aproveita os benefícios e descontos do programa.
 
 ## 3. A rota do dinheiro: BRL → BRS → Mumbuca+
 
 ```mermaid
 flowchart LR
-    A["Cidadã<br/>paga R$ via Pix"] -->|BRL| B["Parceiro de liquidez<br/>KYC · KYB · KYT"]
+    A["Visitante<br/>paga R$ via Pix"] -->|BRL| B["Parceiro de liquidez<br/>KYC · KYB · KYT"]
     B -->|"BRL → BRS<br/>(real tokenizado, Solana)<br/>sem perna de câmbio"| C[("Reserva em BRS<br/>custódia segregada")]
     B -.->|"evento: BRL liquidado"| D["Backend Mumbuca+<br/>valida na API do parceiro"]
     D -->|"DvP: mint 1:1"| E["Programa Mumbuca+<br/>Solana"]
-    E -->|"Mum+"| F["Carteira da cidadã<br/>Phantom"]
+    E -->|"Mum+"| F["Carteira do visitante<br/>Phantom"]
 ```
 
-- **BRL:** o cidadão paga em reais, pelo Pix, a moeda que ele já usa.
+- **BRL:** o visitante paga em reais, pelo Pix, a moeda que ele já usa.
 - **BRS:** o parceiro de liquidez converte os reais em **BRS**, um token referenciado no real que roda na Solana. A conversão BRL→BRS **não tem perna de câmbio**: não há cotação contra moeda estrangeira nem trava de câmbio, e a taxa é 1:1 no mesmo padrão monetário. O BRS fica em **custódia segregada** e forma a **reserva em reais** que lastreia a emissão.
-- **Mumbuca+:** com a liquidação do BRL confirmada, o sistema emite **Mum+ na mesma quantidade em reais** na carteira do cidadão. O Mum+ é a camada de **moeda social**: é nela que entram as regras da política pública, como território, incentivo ao comércio local e crédito controlado.
+- **Mumbuca+:** com a liquidação do BRL confirmada, o sistema emite **Mum+ na mesma quantidade em reais** na carteira do visitante. O Mum+ é a camada de **moeda social**. É nela que entram as regras da política pública: território (só a rede credenciada de Maricá), benefícios e descontos aos visitantes, incentivo ao comércio local e destinação de parte do lucro à cultura.
 
 Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim Mum+ (moeda social com paridade com o real). **Nenhuma perna envolve moeda estrangeira.** E a rota inteira roda numa única rede: o BRS e o Mum+ estão ambos na Solana.
 
@@ -91,7 +103,7 @@ O Mumbuca+ **não guarda dinheiro, não converte moedas e não faz o Pix**. Essa
 | Converter BRL em BRS e custodiar a reserva | Parceiro de liquidez |
 | Notificar a liquidação (webhook assinado + API de consulta) | Parceiro de liquidez |
 | Validar a liquidação, executar o DvP e emitir a moeda social | Mumbuca+ |
-| Regras da política pública (território, incentivo, crédito) | Gestor do ecossistema (Município e Banco Comunitário) |
+| Regras da política pública (território, benefícios e descontos, destinação à cultura) | Gestor do ecossistema (Município e Banco Comunitário) |
 
 **Por que esse desenho:**
 - **Segregação de funções:** a parte financeira regulada fica com quem tem licença, estrutura e responsabilidade por ela. O Mumbuca+ fica com a camada de política pública.
@@ -107,7 +119,11 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 ### 5.2 Fundamentos
 
 1. **A lei exclui expressamente os tokens de utilidade do conceito de ativo virtual.** O art. 3º da Lei nº 14.478/2022 define ativo virtual como *"a representação digital de valor que pode ser negociada ou transferida por meios eletrônicos e utilizada para realização de pagamentos ou com propósito de investimento"*. No inciso III, exclui os *"instrumentos que provejam ao seu titular acesso a produtos ou serviços especificados ou a benefício proveniente desses produtos ou serviços, a exemplo de pontos e recompensas de programas de fidelidade"*.
-2. **O Mum+ é instrumento de acesso a um benefício de programa público.** Ele só é aceito na rede credenciada de Maricá e carrega as regras da política pública: o incentivo de 5% no comércio local e as categorias essenciais do crédito externo (saúde, transporte e emergência), previstos no relatório. Como os pontos de um programa de fidelidade, ele vale dentro de um ecossistema definido por quem o administra.
+2. **O Mum+ é instrumento de acesso a benefícios especificados.**
+   - Ele só é aceito na rede credenciada de Maricá.
+   - Dá ao visitante os benefícios e descontos definidos pelo gestor do programa: gastronomia, hospedagem, cultura e cinema, comércio local.
+   - Como os pontos e recompensas de um programa de fidelidade, ele vale dentro de um ecossistema definido por quem o administra.
+   - O relatório prevê outras regras da mesma natureza, como o incentivo de 5% no comércio local.
 3. **Não há propósito de investimento.** A paridade é fixa (1 Mum+ = R$ 1,00) e não há rendimento, valorização, oferta pública nem mercado secundário promovido pelo emissor. A CVM, no Parecer de Orientação nº 40/2022, separa os tokens de utilidade dos tokens que são valores mobiliários pela ausência de expectativa de retorno sobre o esforço de terceiros.
 4. **Sem "ativo virtual", não há câmbio de ativo virtual.** O art. 76-A da Resolução BCB nº 277/2022, incluído pela Resolução BCB nº 521/2025, leva ao mercado de câmbio a *prestação de serviços de ativos virtuais*. Como o Mum+ não é ativo virtual, a emissão e a circulação dele não entram nessa regra. Além disso, nenhuma etapa da rota envolve moeda estrangeira.
 5. **Quem regula o token é o gestor do ecossistema.** A Mumbuca é uma moeda social instituída e disciplinada pelo Município de Maricá (o relatório cita a Lei Municipal nº 3.673/2025) e operada pelo Banco Comunitário Mumbuca. Credenciamento de lojistas, regras de uso, limites e emissão contra entrada de reais são decisões desse gestor. O Mumbuca+ só leva essas regras para um token. As moedas sociais seguem esse modelo desde o Banco Palmas (1998): **lastro em reais, paridade 1:1, circulação territorial e ausência de curso forçado**, como descreve o próprio Banco Central.
@@ -124,7 +140,7 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 - **DvP (Delivery versus Payment):** o Mum+ só é entregue contra liquidação confirmada em reais. Não existe pré-emissão, pré-venda ou oferta pública: o supply nasce exclusivamente de pagamentos liquidados e validados na fonte.
 - **Paridade fixa e sem formação de preço:** não há livro de ofertas, cotação nem negociação promovida pelo sistema.
 - **Governança on-chain do gestor:** os papéis de administrador e pausador ficam com o gestor do ecossistema, que pode suspender emissões e ajustar limites.
-- **Utilidade especificada no código:** o próximo passo é restringir as transferências do Mum+ a carteiras credenciadas (lojistas e beneficiários da rede) com um *transfer hook* do Token-2022. Isso materializa on-chain a "utilidade especificada" do art. 3º, III.
+- **Utilidade especificada no código:** o próximo passo é restringir as transferências do Mum+ a carteiras credenciadas (lojistas credenciados e carteiras de visitantes) com um *transfer hook* do Token-2022. Isso materializa on-chain a "utilidade especificada" do art. 3º, III.
 
 ### 5.4 Objeções antecipadas
 
@@ -145,7 +161,7 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 | **Trilha de auditoria** | Cada transição de estado e cada evento recebido ficam registrados (append-only) com o corpo original |
 | **Máquina de estados de liquidação** | `AWAITING_PAYMENT → RECEIVED → VALIDATING → APPROVED → MINT_PENDING → MINTED` (ou `FAILED`), com transições atômicas |
 | **Valores em unidades mínimas** | Todo valor é tratado em centavos inteiros, sem ponto flutuante, eliminando erros de arredondamento |
-| **Limites de exposição** | Teto de supply, limite por emissão e valores mínimo e máximo por recarga |
+| **Limites de exposição** | Teto de supply, limite por emissão e valores mínimo e máximo por compra |
 
 ## 7. Compliance by design
 
@@ -163,7 +179,7 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 ```mermaid
 flowchart TB
     subgraph Usuarios["Usuários"]
-        C["Cidadã<br/>navegador + Phantom"]
+        C["Visitante<br/>navegador + Phantom"]
         O["Operador<br/>painel de gestão"]
     end
 
@@ -204,7 +220,7 @@ flowchart TB
 | Registro de carteiras | Liga cada usuário (fictício na demo) a um endereço Solana validado (chave pública base58) |
 | Serviço de emissão | Simula, envia `mint`, acompanha a confirmação e recupera falhas sem duplicar |
 | Banco de transações | Histórico completo e auditável de cada pagamento e transição |
-| Dashboard | Visão da cidadã (saldo, recarga, histórico) e do operador (todos os pagamentos, assinaturas, ações) |
+| Dashboard | "Minha carteira" do visitante (saldo, compra de Mum+, benefícios em Maricá, histórico) e visão do operador (todos os pagamentos, assinaturas, ações) |
 
 **Tecnologias:** Rust e Anchor 1.2 (programa), SPL Token-2022 com metadata on-chain (token), Solana CLI (implantação), Node.js 22, TypeScript, Fastify e Postgres (backend), `@solana/web3.js` (blockchain), React e Vite (dashboard), Phantom (carteira), Railway (hospedagem).
 
@@ -213,18 +229,18 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Cidada as Cidadã
+    actor Visitante
     participant Dash as Dashboard
     participant API as Backend Mumbuca+
     participant LP as Parceiro de liquidez
     participant SC as Programa Mum+ (Solana)
 
-    Cidada->>Dash: Recarregar R$ 50
+    Visitante->>Dash: Comprar R$ 50 em Mum+
     Dash->>API: POST /api/payments
     API->>LP: cotação + transferência BRL→BRS (metadata: id do pagamento)
     LP-->>API: Pix copia-e-cola + QR
     API-->>Dash: exibe QR (Aguardando Pix)
-    Cidada->>LP: paga o Pix (R$ 50)
+    Visitante->>LP: paga o Pix (R$ 50)
     Note over LP: KYC · KYB · KYT
     LP-->>API: webhook assinado "transfer.updated"
     Note over API: o aviso nunca decide sozinho
@@ -234,7 +250,7 @@ sequenceDiagram
     API->>SC: DvP: mint_for_payment(paymentRef, 50 Mum+)
     SC-->>API: assinatura + confirmação
     API-->>Dash: Emitido ✓ + link Solana Explorer
-    SC-->>Cidada: 50 Mum+ na Phantom
+    SC-->>Visitante: 50 Mum+ na Phantom
 ```
 
 ### Máquina de estados de cada pagamento
@@ -286,7 +302,7 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - **Nada é emitido só porque chegou uma notificação.** O pagamento sempre é confirmado na fonte da verdade.
 - O webhook é autenticado por HMAC-SHA256, com janela de tempo e comparação em tempo constante.
 - O programa limita o dano de uma eventual chave vazada: teto total, limite por emissão e pausa de emergência.
-- Toda a URL pública fica atrás de login. Desconhecidos não criam recargas nem disparam emissões.
+- Toda a URL pública fica atrás de login. Desconhecidos não criam compras nem disparam emissões.
 
 ## 11. O token Mumbuca+ (Mum+)
 
@@ -315,7 +331,9 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 | Rastreabilidade | Cada real que entra gera uma emissão pública e auditável |
 | Integração com instituições de pagamento | Provedores plugáveis: Pix hoje, outros amanhã |
 | Inclusão financeira | Funciona com Pix e carteira digital, sem conta bancária tradicional |
-| Sustentabilidade operacional | Menos atendimento manual e logística física, e base para receitas próprias como recargas e parcerias |
+| Sustentabilidade operacional | Menos atendimento manual e logística física, e receita própria com a venda de Mum+ a visitantes e com parcerias |
+| Turismo | Visitantes compram Mum+ e gastam na rede credenciada de Maricá, com benefícios e descontos |
+| Cultura | Na proposta, parte do lucro da operação é revertida para cinema e cultura na cidade |
 | Economia local | O Mum+ é a camada das regras de território e incentivo (5% no comércio local e crédito externo controlado, módulos futuros do relatório) |
 | Transparência e controle | Painel de gestão e explorador público para órgãos de controle |
 
@@ -323,10 +341,10 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 
 **Está no escopo:**
 - Programa Anchor e token Token-2022 na Solana devnet.
-- Recarga Pix pelo parceiro de liquidez, nos ambientes de teste e real (R$ 11).
+- Compra de Mum+ via Pix pelo parceiro de liquidez, nos ambientes de teste e real (R$ 11).
 - Validação na fonte da verdade.
 - DvP automático e idempotente.
-- Dashboard da cidadã e do operador.
+- "Minha carteira" do visitante, com uma seção "Benefícios em Maricá" ilustrativa, e painel do operador.
 - Simulação local para contingência.
 
 **Fica para fases futuras:**
@@ -336,11 +354,13 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - Maquininhas próprias.
 - Assistente de IA.
 - Integração com o Mercado Pago.
+- Rede real de estabelecimentos credenciados e catálogo de benefícios.
+- Mecanismo de destinação de parte do lucro à cultura.
 - Resgate de Mum+ em reais.
 - Prova de reservas on-chain.
 - Rede principal (mainnet).
 
-**Status:** a implementação está completa; o deploy do programa na devnet e o ensaio ao vivo ainda estão pendentes. Veja o [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) e o [plano de implementação](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md).
+**Status:** a implementação está completa e publicada. O programa está na Solana devnet, e o app (backend + dashboard) está no Railway. A demonstração ao vivo usa o provedor simulado, enquanto a integração com o parceiro de liquidez está pronta, faltando só as credenciais. Veja o [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md), o [plano de implementação](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md) e o [redesign](docs/superpowers/specs/2026-11-24-redesign-c2-design.md).
 
 ## 14. Estrutura do repositório e documentação
 

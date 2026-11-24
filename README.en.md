@@ -2,7 +2,7 @@
 
 [🇧🇷 Português](README.md) · 🇺🇸 English
 
-**Tokenization infrastructure for social currencies: a payment in Brazilian reais, settled by a regulated partner, automatically becomes traceable digital balance in the citizen's wallet — with delivery conditioned on payment (DvP) and compliance by design.**
+**Tokenization infrastructure for social currencies: a payment in Brazilian reais, settled by a regulated partner, automatically becomes Mum+ in the visitor's wallet, ready to spend in Maricá with benefits and discounts. Delivery is conditioned on payment (DvP) and compliance is built in by design. Under the proposal, part of the operation's profit funds cinema and culture in the city.**
 
 > Proof of concept for the **Mumbuca+** proposal, based on the report *"Renda Básica de Cidadania — Mumbuca"* (Faculdade Sebrae, Business Administration, class T9, Entrepreneurship & Social Impact, 2026). It is not an official system of the City of Maricá or of Banco Comunitário Mumbuca. It runs on **Solana devnet**.
 
@@ -32,6 +32,8 @@
 
 Mumbuca is the social currency of Maricá, in the state of Rio de Janeiro, Brazil. It was created in 2013, is managed by Banco Comunitário Mumbuca (a community bank), is pegged 1:1 to the Brazilian real (1 Mumbuca = R$ 1.00) and funds the city's Basic Citizenship Income program. According to the report, in 2026 the program serves **more than 93,000 beneficiaries**, pays **230 Mumbucas per month** and moves an annual budget **above R$ 256 million**.
 
+Today Mumbuca circulates in a closed arrangement aimed at benefit recipients. **Mumbuca+** opens the social currency to an **external audience**: tourists and visitors buy Mum+ via Pix to spend in Maricá's accredited network, with access to **benefits and discounts**. Money from outside the city flows straight into local businesses, and under the proposal **part of the profit** goes to **cinema and culture** in the city.
+
 The report identifies bottlenecks that technology can address:
 
 | Bottleneck (report) | How tokenization helps |
@@ -39,34 +41,48 @@ The report identifies bottlenecks that technology can address:
 | Physical processes: plastic cards and thermal paper | 100% digital balances and receipts, verifiable on-chain |
 | Manual traceability and accountability | Every issuance has a public signature anyone can audit |
 | Closed payment arrangement, hard to integrate | Open standard (SPL Token-2022) that plugs into wallets and payment institutions |
-| Fiscal dependence on public transfers only | Funds entering through payment institutions enable top-ups and partnerships |
+| Fiscal dependence on public transfers only | Selling Mum+ to visitors brings outside money into the local economy and generates own revenue, part of it earmarked for culture |
+| Currency limited to residents and beneficiaries | Visitors buy Mum+ via Pix and use it in the same accredited network, with benefits and discounts |
 
-The report proposes a **tokenized dual wallet**. This repository builds its **technical foundation**: an automatic, auditable and compliant bridge between money entering through the payment system and the token reaching the citizen.
+The report proposes a **tokenized dual wallet**. This repository builds its **technical foundation**: an automatic, auditable and compliant bridge between money entering through the payment system and the token reaching whoever will spend it in Maricá.
 
 ## 2. What Mumbuca+ does
 
-1. The citizen picks an amount and makes a **top-up via Pix**, Brazil's instant payment system.
+**Who it is for:** visitors and tourists coming to Maricá. They buy Mum+ and get **benefits and discounts** in the city's accredited network:
+- dining;
+- lodging;
+- culture and cinema;
+- local shops.
+
+Every purchase also supports local culture. In the proof of concept, the benefits shown in the app are **illustrative**.
+
+1. The visitor picks an amount and **buys Mum+ via Pix**, Brazil's instant payment system.
 2. The **liquidity partner** receives the reais, with KYC, KYB and KYT applied at the entry point.
 3. The Mumbuca+ backend **detects settlement**, through a signed webhook or periodic polling, and **confirms it directly against the partner's API**. A notification alone never triggers issuance.
 4. Once the payment is settled, the backend calls `mint_for_payment` on the Solana program: **delivery versus payment (DvP)**.
-5. **Mumbuca+ (Mum+) shows up in the citizen's Phantom wallet**, 1 Mum+ for every R$ 1.00 settled.
+5. **Mumbuca+ (Mum+) shows up in the visitor's Phantom wallet**, 1 Mum+ for every R$ 1.00 settled.
 6. The transaction is **public and verifiable** on Solana Explorer.
 7. No payment is ever minted twice, even with redeliveries, network failures or server restarts.
+8. With Mum+, the visitor spends in Maricá's accredited network and enjoys the program's benefits and discounts.
 
 ## 3. The money route: BRL → BRS → Mumbuca+
 
 ```mermaid
 flowchart LR
-    A["Citizen<br/>pays R$ via Pix"] -->|BRL| B["Liquidity partner<br/>KYC · KYB · KYT"]
+    A["Visitor<br/>pays R$ via Pix"] -->|BRL| B["Liquidity partner<br/>KYC · KYB · KYT"]
     B -->|"BRL → BRS<br/>(tokenized real, Solana)<br/>no FX leg"| C[("BRS reserve<br/>segregated custody")]
     B -.->|"event: BRL settled"| D["Mumbuca+ backend<br/>validates on partner API"]
     D -->|"DvP: 1:1 mint"| E["Mumbuca+ program<br/>Solana"]
-    E -->|"Mum+"| F["Citizen wallet<br/>Phantom"]
+    E -->|"Mum+"| F["Visitor wallet<br/>Phantom"]
 ```
 
-- **BRL:** the citizen pays in reais via Pix, the currency they already use.
+- **BRL:** the visitor pays in reais via Pix, the currency they already use.
 - **BRS:** the liquidity partner converts the reais into **BRS**, a real-referenced token on Solana. The BRL→BRS conversion has **no foreign-exchange leg**: no quote against a foreign currency, no FX lock, and a 1:1 rate within the same monetary standard. The BRS is held in **segregated custody** and forms the **reserve in reais** backing issuance.
-- **Mumbuca+:** once BRL settlement is confirmed, the system issues **Mum+ in the same amount in reais** to the citizen's wallet. Mum+ is the **social-currency layer**, where public-policy rules apply: territory, incentives for local commerce and controlled credit.
+- **Mumbuca+:** once BRL settlement is confirmed, the system issues **Mum+ in the same amount in reais** to the visitor's wallet. Mum+ is the **social-currency layer**, where public-policy rules apply:
+  - territory (only Maricá's accredited network);
+  - benefits and discounts for visitors;
+  - incentives for local commerce;
+  - part of the profit earmarked for culture.
 
 End to end, **value is always denominated in reais**: BRL, then BRS (tokenized real), then Mum+ (a social currency pegged to the real). **No leg involves a foreign currency.** And the whole route runs on a single network: BRS and Mum+ both live on Solana.
 
@@ -91,7 +107,7 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 | Convert BRL into BRS and hold the reserve | Liquidity partner |
 | Notify settlement (signed webhook + query API) | Liquidity partner |
 | Validate settlement, execute DvP and issue the social currency | Mumbuca+ |
-| Public-policy rules (territory, incentives, credit) | Ecosystem governor (City and community bank) |
+| Public-policy rules (territory, benefits and discounts, earmarking for culture) | Ecosystem governor (City and community bank) |
 
 **Why this design:**
 - **Segregation of duties:** the regulated financial activity stays with the party that holds the license, the infrastructure and the responsibility for it. Mumbuca+ owns the public-policy layer.
@@ -109,10 +125,11 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 1. **The law expressly excludes utility tokens from the definition of virtual asset.**
    - Article 3 of Law 14,478/2022 defines a virtual asset as *"a digital representation of value that can be traded or transferred electronically and used for payments or for investment purposes"*.
    - Item III then excludes *"instruments that give their holder access to specified products or services, or to a benefit arising from them, such as points and rewards of loyalty programs"*.
-2. **Mum+ is an instrument of access to a public-program benefit.**
+2. **Mum+ is an instrument of access to specified benefits.**
    - It is accepted only within Maricá's accredited network.
-   - It carries the program's rules: the 5% incentive for local commerce and the essential categories of external credit (health, transport, emergencies) set out in the report.
-   - Like loyalty points, it has value within an ecosystem defined by whoever administers it.
+   - It gives visitors the benefits and discounts defined by the program's governor: dining, lodging, culture and cinema, local shops.
+   - Like loyalty points and rewards, it has value within an ecosystem defined by whoever administers it.
+   - The report foresees further rules of the same kind, such as the 5% incentive for local commerce.
 3. **There is no investment purpose.**
    - The peg is fixed (1 Mum+ = R$ 1.00).
    - There is no yield, no appreciation, no public offering and no secondary market promoted by the issuer.
@@ -138,7 +155,7 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 - **DvP (Delivery versus Payment):** Mum+ is delivered only against confirmed settlement in reais. There is no pre-minting, pre-sale or public offering. Supply is created exclusively from payments settled and validated at the source.
 - **Fixed peg, no price formation:** the system runs no order book, no quotes and no trading.
 - **On-chain governance by the ecosystem governor:** the admin and pauser roles belong to the governor, who can suspend issuance and adjust limits.
-- **Utility specified in code:** the next step is to restrict Mum+ transfers to accredited wallets (network merchants and beneficiaries) with a Token-2022 *transfer hook*. That makes the "specified utility" of Article 3, item III verifiable on-chain.
+- **Utility specified in code:** the next step is to restrict Mum+ transfers to accredited wallets (accredited merchants and visitor wallets) with a Token-2022 *transfer hook*. That makes the "specified utility" of Article 3, item III verifiable on-chain.
 
 ### 5.4 Anticipated objections
 
@@ -165,7 +182,7 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 | **Audit trail** | Every state transition and every incoming event is recorded append-only, with the original payload |
 | **Settlement state machine** | `AWAITING_PAYMENT → RECEIVED → VALIDATING → APPROVED → MINT_PENDING → MINTED` (or `FAILED`), with atomic transitions |
 | **Minor units** | All amounts are handled as integer cents, with no floating point and no rounding errors |
-| **Exposure limits** | Supply cap, per-issuance limit, and minimum and maximum amount per top-up |
+| **Exposure limits** | Supply cap, per-issuance limit, and minimum and maximum amount per purchase |
 
 ## 7. Compliance by design
 
@@ -194,7 +211,7 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 ```mermaid
 flowchart TB
     subgraph Users["Users"]
-        C["Citizen<br/>browser + Phantom"]
+        C["Visitor<br/>browser + Phantom"]
         O["Operator<br/>management dashboard"]
     end
 
@@ -235,7 +252,7 @@ flowchart TB
 | Wallet registry | Links each user (fictitious in the demo) to a validated Solana address (base58 public key) |
 | Minting service | Simulates, sends `mint`, tracks confirmation, recovers from failures without duplicating |
 | Transaction database | Complete, auditable history of every payment and transition |
-| Dashboard | Citizen view (balance, top-up, history) and operator view (all payments, signatures, actions) |
+| Dashboard | Visitor "My wallet" (balance, buying Mum+, benefits in Maricá, history) and operator view (all payments, signatures, actions) |
 
 **Stack:**
 - Program: Rust and Anchor 1.2.
@@ -252,18 +269,18 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Citizen
+    actor Visitor
     participant Dash as Dashboard
     participant API as Mumbuca+ backend
     participant LP as Liquidity partner
     participant SC as Mum+ program (Solana)
 
-    Citizen->>Dash: Top up R$ 50
+    Visitor->>Dash: Buy R$ 50 of Mum+
     Dash->>API: POST /api/payments
     API->>LP: quote + BRL→BRS transfer (metadata: payment id)
     LP-->>API: Pix copy-and-paste code + QR
     API-->>Dash: show QR (Awaiting Pix)
-    Citizen->>LP: pays Pix (R$ 50)
+    Visitor->>LP: pays Pix (R$ 50)
     Note over LP: KYC · KYB · KYT
     LP-->>API: signed webhook "transfer.updated"
     Note over API: a notification never decides alone
@@ -273,7 +290,7 @@ sequenceDiagram
     API->>SC: DvP: mint_for_payment(paymentRef, 50 Mum+)
     SC-->>API: signature + confirmation
     API-->>Dash: Issued ✓ + Solana Explorer link
-    SC-->>Citizen: 50 Mum+ in Phantom
+    SC-->>Visitor: 50 Mum+ in Phantom
 ```
 
 ### Per-payment state machine
@@ -325,7 +342,7 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 - **Nothing is minted just because a notification arrived.** The payment is always confirmed at the source of truth.
 - Webhooks are authenticated with HMAC-SHA256, a time window and constant-time comparison.
 - The program limits the damage from a leaked key: total cap, per-issuance limit and an emergency pause.
-- The entire public URL is behind a login. Strangers cannot create top-ups or trigger issuance.
+- The entire public URL is behind a login. Strangers cannot create purchases or trigger issuance.
 
 ## 11. The Mumbuca+ token (Mum+)
 
@@ -354,7 +371,9 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 | Traceability | Every real that enters produces a public, auditable issuance |
 | Integration with payment institutions | Pluggable providers: Pix today, others tomorrow |
 | Financial inclusion | Works with Pix and a digital wallet, without a traditional bank account |
-| Operational sustainability | Less manual service and physical logistics. A base for own revenue such as top-ups and partnerships |
+| Operational sustainability | Less manual service and physical logistics, plus own revenue from selling Mum+ to visitors and from partnerships |
+| Tourism | Visitors buy Mum+ and spend it in Maricá's accredited network, with benefits and discounts |
+| Culture | Under the proposal, part of the operation's profit goes to cinema and culture in the city |
 | Local economy | Mum+ is the layer for territory and incentive rules (5% for local commerce, controlled external credit; future modules in the report) |
 | Transparency and oversight | Management dashboard plus a public explorer for oversight bodies |
 
@@ -362,10 +381,10 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 
 **In scope:**
 - Anchor program and Token-2022 token on Solana devnet.
-- Pix top-up through the liquidity partner, in the test and production environments (R$ 11).
+- Buying Mum+ via Pix through the liquidity partner, in the test and production environments (R$ 11).
 - Validation at the source of truth.
 - Automatic, idempotent DvP.
-- Citizen and operator dashboards.
+- Visitor "My wallet" with an illustrative "Benefits in Maricá" section, and the operator dashboard.
 - Local simulation as a fallback.
 
 **Future phases:**
@@ -375,11 +394,13 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 - Own card terminals.
 - AI assistant.
 - Mercado Pago integration.
+- A real network of accredited businesses and a benefits catalogue.
+- The mechanism that earmarks part of the profit for culture.
 - Redemption of Mum+ into reais.
 - On-chain proof of reserves.
 - Mainnet.
 
-**Status:** implementation is complete; the on-chain devnet deploy and the live rehearsal are still pending. See the [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) and the [implementation plan](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md). Both are in Portuguese.
+**Status:** implementation is complete and published. The program is on Solana devnet and the app (backend and dashboard) is on Railway. The live demo uses the simulated provider. The liquidity-partner integration is ready and only needs credentials. See the [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md), the [implementation plan](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md) and the [redesign](docs/superpowers/specs/2026-11-24-redesign-c2-design.md); all three are in Portuguese.
 
 ## 14. Repository layout and documentation
 
