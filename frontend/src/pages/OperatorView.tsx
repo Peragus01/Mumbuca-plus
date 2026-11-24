@@ -156,7 +156,7 @@ function NewUserForm({ onCreated }: { onCreated: (u: UserDTO) => void }) {
         </p>
       )}
       <div className="actions">
-        <button type="submit" className="button button--primary" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? 'Cadastrando…' : 'Cadastrar usuário'}
         </button>
       </div>
@@ -254,7 +254,7 @@ export function OperatorView() {
           <h2 id="ops-title" className="card__title">
             Operação
           </h2>
-          <button type="button" className="button button--ghost button--sm" onClick={loadOps}>
+          <button type="button" className="btn-secondary button--sm" onClick={loadOps}>
             Atualizar
           </button>
         </div>
@@ -292,7 +292,7 @@ export function OperatorView() {
             </div>
             <button
               type="button"
-              className="button button--primary"
+              className="btn-primary"
               disabled={!rechargeUser}
               onClick={() => setDialogOpen(true)}
             >
@@ -307,7 +307,7 @@ export function OperatorView() {
           <h2 id="payments-title" className="card__title">
             Pagamentos
           </h2>
-          <button type="button" className="button button--ghost button--sm" onClick={loadPayments}>
+          <button type="button" className="btn-secondary button--sm" onClick={loadPayments}>
             Atualizar
           </button>
         </div>
@@ -386,10 +386,11 @@ export function OperatorView() {
                         )}
                       </td>
                       <td className="actions-cell">
+                        <div className="actions-cell__inner">
                         {canSimulate && (
                           <button
                             type="button"
-                            className="button button--primary button--xs"
+                            className="btn-primary button--xs"
                             disabled={busy[p.id]}
                             onClick={() => act(p, 'simulate')}
                           >
@@ -399,13 +400,14 @@ export function OperatorView() {
                         {canReprocess && (
                           <button
                             type="button"
-                            className="button button--ghost button--xs"
+                            className="btn-secondary button--xs"
                             disabled={busy[p.id]}
                             onClick={() => act(p, 'reprocess')}
                           >
                             Reprocessar
                           </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -447,6 +449,7 @@ export function OperatorView() {
           userId={rechargeUser}
           provider={rechargeProvider}
           allowSimulate
+          title="Recarregar Mum+"
           onClose={() => {
             setDialogOpen(false);
             loadPayments();

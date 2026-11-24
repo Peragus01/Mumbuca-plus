@@ -26,7 +26,7 @@
   --brand: #0f7a4f;
   --brand-strong: #0b6440;
   --brand-ink: #06150f;
-  --brand-soft: rgb(255 210 63 / 22%);
+  --yellow-glow: rgb(255 210 63 / 22%); /* halo amarelo do passo ativo da linha do tempo */
   --accent: var(--yellow);
   --accent-strong: var(--yellow-strong);
 
@@ -450,6 +450,17 @@ p {
     color: transparent;
   }
 }
+/* Alto contraste do sistema (Windows): sem degradê, texto na cor normal. */
+@media (forced-colors: active) {
+  .balance-amount,
+  .balance-card__value {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    -webkit-text-fill-color: currentColor;
+    color: CanvasText;
+  }
+}
 
 .balance-card__note {
   font-size: 0.85rem;
@@ -798,17 +809,22 @@ textarea.code {
   color: var(--danger);
   border-color: var(--danger-line);
 }
-/* Origem (só operador): OZAV em verde, SIMULADO em amarelo. */
+/* Origem (só operador): OZAV em verde, SIMULADO em amarelo. Formato de etiqueta
+   (cantos retos, borda cheia) para não confundir com os selos de estado em pílula. */
 .badge--origin {
+  border-radius: 6px;
+  border-width: 1.5px;
+  padding: 2px 8px;
+  letter-spacing: 0.03em;
   background: var(--neon-soft);
   color: var(--neon);
-  border-color: var(--neon-line);
+  border-color: var(--neon);
 }
 .badge--simulated {
   background: var(--yellow-soft);
   color: var(--yellow);
-  border-color: var(--yellow-line);
-  letter-spacing: 0.04em;
+  border-color: var(--yellow);
+  letter-spacing: 0.06em;
 }
 
 .flags {
@@ -887,6 +903,10 @@ textarea.code {
   border: 1px solid var(--border-strong);
   border-left-width: 4px;
 }
+.alert strong {
+  font-weight: 800;
+  color: inherit;
+}
 .alert--danger {
   background: var(--danger-bg);
   color: #ffd0cb;
@@ -921,11 +941,14 @@ textarea.code {
   margin: 0;
 }
 .stat {
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  padding: 14px 16px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 .stat dt {
   font-size: 0.75rem;
@@ -935,8 +958,12 @@ textarea.code {
   letter-spacing: 0.05em;
 }
 .stat dd {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
+  font-size: 1.02rem;
   font-weight: 700;
+  color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -947,10 +974,14 @@ textarea.code {
 /* ---------- table ---------- */
 
 .table-scroll {
-  /* Positioned so absolutely-placed .sr-only cells stay inside the scroller (no page overflow). */
+  /* Positioned so absolutely-placed .sr-only cells stay inside the scroller (no page overflow).
+     A tabela rola dentro deste contêiner, nunca a página (375px). */
   position: relative;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--border);
 }
 .table {
   width: 100%;
@@ -959,7 +990,7 @@ textarea.code {
 }
 .table th,
 .table td {
-  padding: 12px 14px;
+  padding: 14px 14px;
   text-align: left;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
@@ -981,17 +1012,27 @@ textarea.code {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.table td {
+  color: var(--text);
+}
 .table tbody tr:nth-child(even) {
-  background: rgb(255 255 255 / 2%);
+  background: rgb(255 255 255 / 3%);
 }
 .table tbody tr:hover {
-  background: rgb(255 255 255 / 5%);
+  background: rgb(255 255 255 / 6%);
 }
-.actions-cell {
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table th:last-child,
+.table td:last-child {
+  padding-right: 20px;
+}
+/* A célula continua table-cell; o flex fica num wrapper interno. */
+.actions-cell__inner {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
-  padding-right: 20px;
 }
 
 .user-list {
@@ -1122,12 +1163,12 @@ textarea.code {
 .timeline__step--active .timeline__marker {
   border-color: var(--yellow);
   color: var(--yellow);
-  box-shadow: 0 0 0 4px var(--brand-soft);
+  box-shadow: 0 0 0 4px var(--yellow-glow);
   animation: pulse 1.4s ease-in-out infinite;
 }
 @keyframes pulse {
   50% {
-    box-shadow: 0 0 0 7px var(--brand-soft);
+    box-shadow: 0 0 0 7px var(--yellow-glow);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1384,7 +1425,8 @@ textarea.code {
     align-items: flex-start;
     text-align: left;
   }
-  .toolbar > .button {
+  .toolbar > .button,
+  .toolbar > .btn-primary {
     width: 100%;
   }
   .login__card {
