@@ -33,9 +33,10 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
     <main className="login">
       <div className="login__card">
         <div className="login__brand">
-          <BrandMark size={48} />
-          <h1>Mumbuca+</h1>
-          <p className="muted">A moeda social de Maricá, agora na sua carteira digital.</p>
+          <h1 className="login__title">
+            <BrandMark size={56} wordmark subtitle />
+          </h1>
+          <p className="muted">Entre para acessar sua carteira digital de Mum+.</p>
         </div>
         <form className="stack" onSubmit={submit} noValidate>
           <div className="field">
@@ -56,12 +57,18 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
               {error}
             </p>
           )}
-          <button type="submit" className="button button--primary button--block" disabled={busy}>
+          <button type="submit" className="button btn-primary button--block button--lg" disabled={busy}>
             {busy ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
       </div>
-      <p className="login__footer muted small">Mum+ é emitido na rede Solana, 1 Mum+ = R$ 1,00.</p>
+      <p className="login__footer muted small">
+        <span className="chip chip-onchain">
+          <span className="chip__dot" aria-hidden="true" />
+          on-chain · Solana
+        </span>
+        <span>Mum+ é emitido na rede Solana, 1 Mum+ = R$ 1,00.</span>
+      </p>
     </main>
   );
 }
