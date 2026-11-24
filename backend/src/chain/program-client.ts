@@ -117,3 +117,20 @@ export function configMatches(
 ): boolean {
   return cfg.admin.equals(expected.admin) && cfg.minter.equals(expected.minter) && cfg.pauser.equals(expected.pauser);
 }
+
+/** `pause` / `unpause` (accounts: pauser signer, config). Used by tests and ops tooling. */
+export function buildPauserInstruction(
+  programId: PublicKey,
+  pauser: PublicKey,
+  name: 'pause' | 'unpause',
+): TransactionInstruction {
+  const [config] = findConfigPda(programId);
+  return new TransactionInstruction({
+    programId,
+    keys: [
+      { pubkey: pauser, isSigner: true, isWritable: false },
+      { pubkey: config, isSigner: false, isWritable: true },
+    ],
+    data: ixDiscriminator(name),
+  });
+}
