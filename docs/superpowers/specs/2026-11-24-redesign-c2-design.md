@@ -97,3 +97,23 @@ O resultado precisa parecer um produto de fintech pronto, legível no telão e n
 - sombras e animações sutis;
 - organização interna do CSS;
 - ícones em SVG inline ou emoji, desde que sem dependência externa.
+
+## Revisão (2026-11-24): público visitante e "Benefícios em Maricá"
+
+**Decisão do dono.** O foco do Mumbuca+ é o **público externo**: turistas e visitantes compram Mum+ para gastar em Maricá e, com isso, têm benefícios e descontos na rede da cidade. Parte do lucro é revertida para **cinema e cultura** em Maricá.
+
+Esta revisão substitui os textos da visão do usuário descritos acima:
+- **Nome da visão:** "Minha carteira" (antes "Cidadã") no menu e no título.
+- **Saudação:** "Bem-vindo a Maricá, <nome>".
+- **Rótulo do saldo:** "Seu saldo para gastar em Maricá".
+- **Botão primário:** "＋ Comprar Mum+" (antes "＋ Recarregar"). O título da janela vira "Comprar Mum+ via Pix".
+- **Selos:** saem "🌿 Comércio local fortalecido". Entram "🎟️ Descontos e benefícios na rede de Maricá" e "🎬 Parte do lucro financia cinema e cultura na cidade".
+- **Seção nova "Benefícios em Maricá":** fica abaixo do saldo, com 4 cartões ilustrativos (conteúdo estático, sem backend):
+  - Gastronomia: "até 10% off";
+  - Hospedagem: "até 15% off";
+  - Cultura e cinema: "ingresso com desconto";
+  - Comércio local: "cashback de 5%".
+
+  Cada cartão leva o selo "exemplo". **Não usar nomes de estabelecimentos reais.** O rodapé da seção diz: "Benefícios ilustrativos da proposta Mumbuca+."
+
+A visão do operador continua como está, sem mudança de textos.
