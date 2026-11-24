@@ -16,6 +16,7 @@ export type PaymentPatch = Partial<
     | 'failureReason'
     | 'lastError'
     | 'attempts'
+    | 'mintRejections'
   >
 >;
 
@@ -40,6 +41,7 @@ interface PaymentRow {
   failure_reason: string | null;
   last_error: string | null;
   attempts: string | number | bigint;
+  mint_rejections: string | number | bigint;
   created_at: Date;
   updated_at: Date;
 }
@@ -68,6 +70,7 @@ function mapPayment(r: PaymentRow): Payment {
     failureReason: r.failure_reason,
     lastError: r.last_error,
     attempts: Number(r.attempts),
+    mintRejections: Number(r.mint_rejections),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -85,6 +88,7 @@ const PATCH_COLUMNS: Record<keyof PaymentPatch, string> = {
   failureReason: 'failure_reason',
   lastError: 'last_error',
   attempts: 'attempts',
+  mintRejections: 'mint_rejections',
 };
 
 /** Builds "col = $n" fragments (starting at $start) and the matching params; bigint -> string for node-pg. */

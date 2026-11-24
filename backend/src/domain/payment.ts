@@ -42,6 +42,8 @@ export interface Payment {
   failureReason: string | null;
   lastError: string | null;
   attempts: number;
+  /** Definitive program rejections (counted apart from transient attempts); FAILED at MAX_MINT_ATTEMPTS. */
+  mintRejections: number;
   createdAt: Date;
   updatedAt: Date;
 }

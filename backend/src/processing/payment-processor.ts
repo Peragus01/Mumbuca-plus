@@ -226,11 +226,12 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
         }
         // A rejection may still hide a duplicate: the receipt is the source of truth.
         if (await token.isPaymentRefUsed(ref)) return await recover(p, ref);
-        const attempts = p.attempts + 1;
+        // Counted apart from `attempts` (transient streak), so an outage never brings a paid payment closer to FAILED.
+        const mintRejections = p.mintRejections + 1;
         const code = errorCode(e);
-        log.warn({ paymentId: p.id, error: 'MintRejectedError', reason: e.reason, attempts }, 'mint rejected');
-        if (attempts >= env.MAX_MINT_ATTEMPTS) return await fail(p, code, { attempts, lastError: code });
-        await payments.patch(p.id, { attempts, lastError: code });
+        log.warn({ paymentId: p.id, error: 'MintRejectedError', reason: e.reason, mintRejections }, 'mint rejected');
+        if (mintRejections >= env.MAX_MINT_ATTEMPTS) return await fail(p, code, { mintRejections, lastError: code });
+        await payments.patch(p.id, { mintRejections, lastError: code });
         return 'stop';
       }
       return await bump(p, e);

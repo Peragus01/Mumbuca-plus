@@ -10,6 +10,7 @@ create table payments (
   last_valid_block_height bigint,
   needs_review boolean not null default false, amount_mismatch boolean not null default false,
   failure_reason text, last_error text, attempts int not null default 0,
+  mint_rejections int not null default 0,
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   unique (provider, provider_payment_id));
 create table payment_events (

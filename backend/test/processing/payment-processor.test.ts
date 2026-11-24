@@ -610,14 +610,33 @@ describe('PaymentProcessor', () => {
       await t.proc.signal(p.id, 'webhook');
       let r = await t.get(p.id);
       expect(r.status).toBe('APPROVED');
-      expect(r.attempts).toBe(1);
+      expect(r.mintRejections).toBe(1);
       expect(r.lastError).toBe('mint_rejected:CapExceeded');
       r = await t.proc.process(p.id);
       expect(r.status).toBe('APPROVED');
       r = await t.proc.process(p.id);
       expect(r.status).toBe('FAILED');
       expect(r.failureReason).toBe('mint_rejected:CapExceeded');
-      expect(r.attempts).toBe(3);
+      expect(r.mintRejections).toBe(3);
+      expect(r.attempts).toBe(0); // rejections do not count as transient attempts
+    });
+
+    it('(R8) 10 transient failures then 1 rejection → still APPROVED (not FAILED), mintRejections 1', async () => {
+      const t = await setup();
+      const p = await t.paid();
+      for (let i = 0; i < 10; i++) {
+        t.chain.sendQueue.push(new TransientChainError('chain operation failed (sendRawTransaction): rpc_timeout'));
+      }
+      t.chain.sendQueue.push(new MintRejectedError('CapExceeded'));
+      await t.proc.signal(p.id, 'webhook');
+      for (let i = 0; i < 10; i++) await t.proc.process(p.id);
+      const r = await t.get(p.id);
+      expect(r.status).toBe('APPROVED');
+      expect(r.attempts).toBe(10);
+      expect(r.mintRejections).toBe(1);
+      expect(r.lastError).toBe('mint_rejected:CapExceeded');
+      expect(r.failureReason).toBeNull();
+      expect((await t.proc.process(p.id)).status).toBe('MINTED');
     });
 
     it('(b) receipt exists but findMintTx returns null → stays, lastError mint_tx_not_found_yet, no MINTED without signature', async () => {

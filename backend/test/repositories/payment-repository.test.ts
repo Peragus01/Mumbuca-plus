@@ -76,6 +76,19 @@ describe('PaymentRepository', () => {
     expect((await events(db, p.id)).filter((e) => e.kind === 'note')).toHaveLength(1);
   });
 
+  it('mintRejections defaults to 0 and is patchable separately from attempts', async () => {
+    const { repo, mk } = await setup();
+    const p = await mk();
+    expect(p.mintRejections).toBe(0);
+    const u = await repo.patch(p.id, { mintRejections: 2 });
+    expect(u.mintRejections).toBe(2);
+    expect(u.attempts).toBe(0);
+    const t = await repo.transition(p.id, ['AWAITING_PAYMENT'], 'RECEIVED', { mintRejections: 3, attempts: 1 });
+    expect(t).toMatchObject({ mintRejections: 3, attempts: 1 });
+    expect(typeof t!.mintRejections).toBe('number');
+    expect((await repo.findById(p.id))!.mintRejections).toBe(3);
+  });
+
   it('recordProviderEvent returns false on duplicate event id', async () => {
     const { repo, mk } = await setup();
     const p = await mk();
