@@ -90,11 +90,19 @@ Deve terminar com `OK: config.admin/minter/pauser match the expected values.`. S
 
 ## 6. Teste manual de emissão
 
-**Não rode `smoke:mint` agora**: hoje ele ainda é o script da versão EVM. Ele só passa a ser a versão Solana depois da Task 15. Quando a Task 15 existir, com `MINTER_SECRET_KEY`, `SOLANA_RPC_URL` e `PROGRAM_ID` no `.env`:
+`smoke:mint` usa o mesmo gateway Solana do backend. Ele lê o `.env` inteiro (o `loadEnv` do backend), então o `.env` precisa estar completo e válido, com `MINTER_SECRET_KEY`, `SOLANA_RPC_URL` e `PROGRAM_ID` deste deploy. O script nunca imprime a URL do RPC nem a chave.
 
-1. Emita 1 Mum+ (`100` unidades) para a Phantom do dono com `npm run smoke:mint -w backend`.
+1. Emita 1 Mum+ (`100` unidades) para a Phantom do dono:
+   ```bash
+   npm run smoke:mint -w backend -- <PUBKEY_DA_PHANTOM> 100
+   ```
+   O script imprime o `payment ref` usado (gerado na hora), o link da PDA de recibo, o link da transação, o resultado e os saldos antes e depois.
 2. Na Phantom (rede devnet), veja o token chegar. Abra a transação no Solana Explorer (cluster devnet).
-3. Repita o mesmo `payment_ref`: a segunda emissão deve falhar, pois a PDA de recibo já existe.
+3. Repita com o **mesmo** `payment_ref` (terceiro argumento, o valor `0x...` impresso no passo 1):
+   ```bash
+   npm run smoke:mint -w backend -- <PUBKEY_DA_PHANTOM> 100 <PAYMENT_REF_DO_PASSO_1>
+   ```
+   A rede rejeita: o script termina com `PaymentRefAlreadyUsed`, pois a PDA de recibo já existe, e nada é emitido.
 
 ## 7. Opcional: build verificável
 

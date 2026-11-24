@@ -35,9 +35,10 @@ Marque cada item e anote data e hora.
 - [ ] **Chaves do ambiente certo.** `PROVIDER_ENV=sandbox` com `OZAV_API_KEY` começando com `ozav_sk_test_`, ou `PROVIDER_ENV=live` com `ozav_sk_live_`. O backend recusa subir com combinação errada. `OZAV_CUSTOMER_ID` e `OZAV_WALLET_ID` devem ser do mesmo ambiente.
 - [ ] **Railway no ar.** A URL HTTPS abre o login; `GET /api/session` responde `{"authenticated":false}`; o último deploy está ativo.
 - [ ] **Variáveis setadas** no serviço: `PROGRAM_ID`, `SOLANA_RPC_URL`, `MINTER_SECRET_KEY`, `DATABASE_URL`, `DEMO_PASSWORD`, `SESSION_SECRET` e as demais da seção 5.
+- [ ] **Painel sem alerta de configuração.** O painel do operador não deve mostrar "Configuração on-chain divergente". O backend confere na subida que `config.minter` é a carteira emissora, que `max_mint_per_tx` (2000000) é pelo menos `MAX_RECHARGE_CENTS` e que o programa não está pausado; se algo não bater, o log mostra `ON-CHAIN PROGRAM CONFIG MISMATCH` e o painel lista o problema.
 - [ ] **Ensaio sandbox:** recarga de R$ 1.000, Simular, `Emitido`; ver 1.000 Mum+ na Phantom; abrir a transação no Solana Explorer (cluster devnet); clicar em Reprocessar e confirmar que nenhuma nova transação aparece. Anote a assinatura e a PDA de recibo.
 - [ ] **Ensaio simulado:** recarga `SIMULADO` de R$ 50, `Emitido`.
-- [ ] **Ensaio live (se houver chave live):** `PROVIDER_ENV=live`, chave e IDs live, `MIN_RECHARGE_CENTS=1100`; recarga de R$ 11 paga via Pix pelo dono; esperar `Emitido` com 11 Mum+. Se falhar, registre o motivo aqui e use o sandbox como caminho principal.
+- [ ] **Ensaio live (se houver chave live):** `PROVIDER_ENV=live`, chave e IDs live, `MIN_RECHARGE_CENTS=1100`, `MAX_RECHARGE_CENTS=2000000`; recarga de R$ 11 paga via Pix pelo dono; esperar `Emitido` com 11 Mum+. Se falhar, registre o motivo aqui e use o sandbox como caminho principal.
 - [ ] **Vídeo de contingência gravado** (seção 6) e embutido no PPT.
 - [ ] Internet do local conferida e plano B (celular como roteador).
 
@@ -51,17 +52,18 @@ Marque cada item e anote data e hora.
    - mostrar os 1.000 Mum+ na Phantom (devnet);
    - abrir a transação no **Solana Explorer** e mostrar a **PDA de recibo** do pagamento.
 3. **Ponto alto (somente se o ensaio live passou):** recarga de R$ 11 com Pix real, pago ao vivo, com emissão automática.
-4. **Idempotência:** clicar em **Reprocessar** no pagamento já emitido e mostrar que nada novo é emitido (mesma assinatura, saldo igual). Explicar: o recibo é uma PDA derivada da referência do pagamento; uma segunda emissão com a mesma referência falha on-chain.
+4. **Idempotência:** clicar em **Reprocessar** no pagamento já emitido e mostrar que nada novo é emitido (mesma assinatura, saldo igual). Isso demonstra a idempotência do **banco de dados**: o pagamento já está `Emitido` e o backend nem chega a falar com a rede. Para a **prova on-chain**: abrir no Solana Explorer a **PDA de recibo** do pagamento (ela só existe porque a emissão ocorreu) ou, no terminal, repetir `npm run smoke:mint -w backend -- <PUBKEY> 100 <PAYMENT_REF>` com um `payment_ref` já usado (veja [solana-deploy.md](solana-deploy.md), seção 6): a rede rejeita com `PaymentRefAlreadyUsed`, porque a PDA de recibo já existe.
 5. **Contingência** (seção 4): parceiro fora, usar `SIMULADO`; sem internet, vídeo gravado.
 
 ## 4. Contingências
 
 | Problema | O que fazer |
 | --- | --- |
-| Parceiro de liquidez fora do ar ou Pix não confirma | Criar a recarga com o provedor `SIMULADO` (R$ 11 a R$ 20.000) e clicar em Simular pagamento. O caminho on-chain é o mesmo. |
+| Parceiro de liquidez fora do ar ou Pix não confirma | Criar a recarga com o provedor `SIMULADO` (R$ 11 a R$ 20.000) e clicar em Simular pagamento. O caminho on-chain é o mesmo. O `SIMULADO` continua disponível mesmo com `PROVIDER_ENV=live` (atrás da senha da demonstração; emite tokens de devnet). A consulta ao parceiro feita pelo reconciler corre fora da fila de processamento, então um parceiro lento não atrasa o `SIMULADO`. |
 | Sem internet no local | Passar o vídeo gravado (seção 6) no PPT. |
 | SOL da minter baixo (alerta no painel) | Enviar SOL: `solana transfer <MINTER_PUBKEY> 1 --allow-unfunded-recipient` ou faucet https://faucet.solana.com. Pagamentos que falharam por falta de saldo voltam a ser processados pelo reconciler ou por Reprocessar. |
-| Programa pausado (painel mostra "Pausado") | Só a keypair `pauser` executa `unpause` (o admin apenas troca o pauser com `set_pauser`). Não há script no repositório para isso: use a keypair do pauser com um cliente Anchor sobre o IDL em `backend/src/chain/idl/mumbuca_plus.json`. Depois confira com `--verify` e olhe o painel. |
+| Programa pausado (painel mostra "Pausado") | Só a keypair `pauser` executa `unpause` (o admin apenas troca o pauser com `set_pauser`). No WSL, com `SOLANA_RPC_URL` e `PROGRAM_ID` exportados: `npm run unpause:program -w backend -- --pauser-keypair <caminho do JSON do pauser>` (para pausar de propósito: `npm run pause:program -w backend -- --pauser-keypair <caminho>`). O script nunca imprime chaves nem a URL do RPC. Depois confira o painel. Pagamentos aprovados durante a pausa ficam aguardando (`token_paused`) e são emitidos depois. |
+| Painel mostra "Configuração on-chain divergente" | `config.minter` diferente da carteira emissora, `max_mint_per_tx` menor que a recarga máxima, ou programa pausado. Corrija o deploy (`MINTER_SECRET_KEY` certo, `MAX_RECHARGE_CENTS` <= 2000000, `unpause`) e reinicie o serviço. Pagamentos pagos não falham por isso: ficam `APPROVED` aguardando (`program_unauthorized` ou `program_error`) e são emitidos depois da correção, pelo reconciler ou por Reprocessar. |
 | RPC público lento ou com limite | Trocar `SOLANA_RPC_URL` por um RPC de provedor com chave e reiniciar o serviço. |
 | Pagamento travado | Reprocessar no painel. Se continuar, olhar os logs do Railway (só aparecem classes de erro, nunca segredos). |
 | Webhook não chega | O reconciler cobre. Aguarde até `RECONCILE_INTERVAL_MS`. |
@@ -89,11 +91,12 @@ Modelo em `backend/.env.example`. Nenhum valor aqui.
 | `OZAV_WEBHOOK_SECRET` | Segredo de assinatura dos webhooks (opcional; sem ele os webhooks são rejeitados e o reconciler cobre). |
 | `OZAV_TARGET_CURRENCY` | Moeda de destino da rota (fixa em `BRS`). |
 | `OZAV_TARGET_CHAIN` | Rede de destino no parceiro (padrão `solana`). |
-| `MIN_RECHARGE_CENTS` | Recarga mínima, em centavos (live: `1100`). |
-| `MAX_RECHARGE_CENTS` | Recarga máxima, em centavos. |
+| `MIN_RECHARGE_CENTS` | Recarga mínima, em centavos. Sandbox: `100000`; live: `1100`. |
+| `MAX_RECHARGE_CENTS` | Recarga máxima, em centavos. Sandbox: `1000000`; live: `2000000`. Deve ser no máximo `2000000` (o `max_mint_per_tx` on-chain); um valor recebido acima do máximo vai para revisão e nunca é emitido. |
 | `RECONCILE_INTERVAL_MS` | Intervalo do reconciler em ms (padrão 5000). |
 | `MINT_CONFIRM_TIMEOUT_MS` | Tempo máximo para confirmar a emissão on-chain (padrão 60000). |
-| `MAX_MINT_ATTEMPTS` | Tentativas de emissão antes de marcar para revisão (padrão 5). |
+| `RPC_TIMEOUT_MS` | Tempo máximo de cada chamada ao RPC da Solana, em ms (padrão 12000). Uma chamada travada vira erro temporário e é tentada de novo. |
+| `MAX_MINT_ATTEMPTS` | Rejeições definitivas do programa (por exemplo `CapExceeded`) antes de o pagamento ser marcado como `FAILED` (padrão 5). Erros temporários de rede não contam. Programa pausado, minter não autorizada (`Unauthorized`) e erros desconhecidos do programa também não contam: o pagamento fica `APPROVED` aguardando a correção. |
 | `LOW_SOL_THRESHOLD_LAMPORTS` | Saldo da minter abaixo do qual o painel alerta (padrão 100000000). |
 | `LOG_LEVEL` | Opcional: nível de log (padrão `info`). |
 | `NODE_ENV` | Em produção use `production` (cookie de sessão seguro, só HTTPS). Local sobre http: `development`. |

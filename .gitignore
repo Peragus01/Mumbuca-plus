@@ -1,9 +1,6 @@
 node_modules
 dist
 .env
-artifacts
-cache
-typechain-types
 coverage
 anchor/target
 anchor/test-ledger
