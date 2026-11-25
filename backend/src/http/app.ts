@@ -128,7 +128,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   }
 
   app.setNotFoundHandler((req, reply) => {
-    const isApi = req.url.startsWith('/api') || req.url.startsWith('/webhooks');
+    const isApi =
+      req.url.startsWith('/api') || req.url.startsWith('/webhooks') || req.url.startsWith('/token/');
     if (staticDir && req.method === 'GET' && !isApi) return reply.sendFile('index.html');
     return reply.code(404).send({ error: 'not_found' });
   });

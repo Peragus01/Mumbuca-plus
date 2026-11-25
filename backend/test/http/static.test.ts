@@ -40,6 +40,11 @@ describe('static frontend', () => {
 
     const js = await t.app.inject({ method: 'GET', url: '/app.js' });
     expect(js.headers['access-control-allow-origin']).toBeUndefined();
+
+    // A missing token file is a JSON 404, never the SPA page.
+    const missing = await t.app.inject({ method: 'GET', url: '/token/missing.json' });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: 'not_found' });
   });
 
   it('without staticDir unknown routes are JSON 404', async () => {

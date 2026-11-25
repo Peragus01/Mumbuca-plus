@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { Connection, Keypair, PublicKey, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
-import { buildSetMetadataUriInstruction } from '../src/chain/program-client.js';
+import { buildSetMetadataUriInstruction, MAX_METADATA_URI_BYTES } from '../src/chain/program-client.js';
 
 /**
  * Points the Mum+ TokenMetadata `uri` at the public JSON with the logo (admin only).
@@ -29,6 +29,9 @@ if (!values['admin-keypair'] || !values.uri) {
   fail('usage: set:metadata-uri -- --admin-keypair <path> --uri <https://.../mum.json>');
 }
 if (!/^https:\/\//.test(values.uri)) fail('the uri must start with https://');
+if (Buffer.byteLength(values.uri, 'utf8') > MAX_METADATA_URI_BYTES) {
+  fail(`the uri must be at most ${MAX_METADATA_URI_BYTES} bytes`);
+}
 
 let admin: Keypair;
 try {

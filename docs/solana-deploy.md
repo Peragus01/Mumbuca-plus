@@ -129,27 +129,27 @@ O backend serve `/token/*` com `Access-Control-Allow-Origin: *`, para carteiras 
 **1. Atualizar o programa (no WSL, com a carteira de administrador, que é a autoridade de atualização):**
 
 ```bash
+# traga só o código do programa (não copie anchor/target do Windows: ele tem outro keypair)
+cp -r /mnt/c/Users/<usuario-windows>/OneDrive/Desktop/MumbucaPlus/anchor/programs ~/mumbuca-anchor/
 cd ~/mumbuca-anchor
-# traga o código novo do repositório (anchor/programs) e compile
 anchor build
-solana program deploy target/deploy/mumbuca_plus.so --program-id target/deploy/mumbuca_plus-keypair.json
+solana program deploy target/deploy/mumbuca_plus.so --program-id target/deploy/mumbuca_plus-keypair.json -u devnet
 ```
 
-O programa novo é ~30 KB maior; a CLI estende a conta do programa automaticamente. O deploy usa um buffer temporário (~2 SOL), devolvido ao final. Endereços, saldos e emissões não mudam.
+O programa novo é ~30 KB maior; a CLI estende a conta do programa automaticamente. O deploy usa um buffer temporário (~2 SOL), devolvido ao final. Se o deploy falhar no meio, recupere o SOL do buffer com `solana program close --buffers -u devnet`. Endereços, saldos e emissões não mudam.
 
-**2. Apontar o link da logo (no PowerShell, na raiz do repositório):**
+**2. Apontar o link da logo (no PowerShell, na raiz do repositório; o backend/.env precisa ter SOLANA_RPC_URL e PROGRAM_ID):**
 
-```bash
-npm run set:metadata-uri -w backend -- --admin-keypair \wsl.localhostUbuntuhome<usuario>.configsolanaid.json --uri https://mumbuca-plus-production.up.railway.app/token/mum.json
+```powershell
+npm run set:metadata-uri -w backend -- --admin-keypair \\wsl.localhost\Ubuntu\home\<usuario-wsl>\.config\solana\id.json --uri https://mumbuca-plus-production.up.railway.app/token/mum.json
 ```
 
 Só o administrador consegue: qualquer outra chave recebe `Unauthorized`. O `uri` aceita até 200 bytes (`UriTooLong`).
 
-**3. Metadados do programa (nome, descrição e logo, padrão Program Metadata):**
+**3. Metadados do programa (nome, descrição e logo, padrão Program Metadata; no PowerShell, na raiz do repositório):**
 
-```bash
-cd ~/mumbuca-anchor
-npx @solana-program/program-metadata@latest write security HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm ./security.json --rpc https://api.devnet.solana.com
+```powershell
+npx @solana-program/program-metadata@0.11.0 write security HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm anchor/security.json --keypair \\wsl.localhost\Ubuntu\home\<usuario-wsl>\.config\solana\id.json --rpc https://api.devnet.solana.com
 ```
 
 O arquivo é `anchor/security.json`. Só a autoridade de atualização do programa pode publicar. O Explorer ainda está passando a ler o ícone desse padrão; o nome e a descrição já ficam publicados on-chain.
