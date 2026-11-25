@@ -108,7 +108,7 @@ export function Entry({ onSignedIn }: { onSignedIn: () => void }) {
             <li>2. Em Configurações, ative a rede de testes (Devnet)</li>
             <li>3. Volte aqui e toque em Entrar</li>
           </ol>
-          <PopButton color="marica" asChild>
+          <PopButton color="marica" className="no-underline" asChild>
             <a href="https://phantom.app/download" target="_blank" rel="noopener noreferrer">
               Instalar Phantom ↗
             </a>

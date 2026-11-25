@@ -1449,6 +1449,7 @@ textarea.code {
 .entry__bg {
   position: absolute;
   inset: 0;
+  z-index: 0; /* own stacking context: keeps the gradient canvas (z-index -1) above .entry's background */
 }
 .entry__bg--soft {
   opacity: 0.35;
@@ -1456,10 +1457,12 @@ textarea.code {
 .entry__veil {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background: rgb(6 21 15 / 55%);
 }
 .entry__body {
   position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 400px;
 }
