@@ -86,7 +86,7 @@ npm run init:program -w backend -- --verify \
 
 Deve terminar com `OK: config.admin/minter/pauser match the expected values.`. Se o `initialize` falhar com a mensagem "initialize falhou" (programa já inicializado), o script também confere a config existente e avisa. Se `admin` ou `minter` forem outros, alguém inicializou antes de você: **faça um novo deploy com um novo program id** (gere outra keypair do programa, `anchor keys sync`, `anchor build`, `anchor deploy`) e repita este passo.
 
-**URI dos metadados do token.** O `uri` é fixado no `initialize` e não existe instrução para alterá-lo. Por padrão é vazio. Para definir, use `--uri <url>` na primeira (e única) chamada.
+**URI dos metadados do token.** O `uri` pode ser definido no `initialize` (`--uri <url>`) e alterado depois pelo administrador com a instrução `set_metadata_uri` (seção 9).
 
 ## 6. Teste manual de emissão
 
@@ -116,3 +116,40 @@ Requer Docker. Depois, a verificação pública do programa pode ser feita com `
 ## 8. Conferir o recibo no explorador
 
 A PDA de recibo (`["receipt", payment_ref]`) de cada pagamento é a prova on-chain de que aquele pagamento foi emitido uma única vez. Abra essa conta no Solana Explorer (cluster devnet): ela existe apenas se a emissão ocorreu. Esse é o argumento visual do DvP e da deduplicação on-chain.
+
+## 9. Logo do token e metadados do programa
+
+A logo do Mum+ aparece na Phantom e no Solana Explorer a partir do `uri` dos metadados do token. Ele aponta para um JSON público servido pelo próprio app:
+
+- JSON: https://mumbuca-plus-production.up.railway.app/token/mum.json (`frontend/public/token/mum.json`)
+- Imagem: https://mumbuca-plus-production.up.railway.app/token/mum-logo.png (512×512, petróleo sobre creme)
+
+O backend serve `/token/*` com `Access-Control-Allow-Origin: *`, para carteiras e exploradores lerem de outro site.
+
+**1. Atualizar o programa (no WSL, com a carteira de administrador, que é a autoridade de atualização):**
+
+```bash
+cd ~/mumbuca-anchor
+# traga o código novo do repositório (anchor/programs) e compile
+anchor build
+solana program deploy target/deploy/mumbuca_plus.so --program-id target/deploy/mumbuca_plus-keypair.json
+```
+
+O programa novo é ~30 KB maior; a CLI estende a conta do programa automaticamente. O deploy usa um buffer temporário (~2 SOL), devolvido ao final. Endereços, saldos e emissões não mudam.
+
+**2. Apontar o link da logo (no PowerShell, na raiz do repositório):**
+
+```bash
+npm run set:metadata-uri -w backend -- --admin-keypair \wsl.localhostUbuntuhome<usuario>.configsolanaid.json --uri https://mumbuca-plus-production.up.railway.app/token/mum.json
+```
+
+Só o administrador consegue: qualquer outra chave recebe `Unauthorized`. O `uri` aceita até 200 bytes (`UriTooLong`).
+
+**3. Metadados do programa (nome, descrição e logo, padrão Program Metadata):**
+
+```bash
+cd ~/mumbuca-anchor
+npx @solana-program/program-metadata@latest write security HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm ./security.json --rpc https://api.devnet.solana.com
+```
+
+O arquivo é `anchor/security.json`. Só a autoridade de atualização do programa pode publicar. O Explorer ainda está passando a ler o ícone desse padrão; o nome e a descrição já ficam publicados on-chain.

@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -23,6 +23,23 @@ describe('static frontend', () => {
     expect(api.statusCode).toBe(404);
     expect(api.json()).toEqual({ error: 'not_found' });
     expect((await get('/webhooks/nope')).statusCode).toBe(404);
+  });
+
+  it('token metadata under /token/ is readable cross-origin (wallets, explorers); other files are not', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'mp-static-'));
+    writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Mumbuca+</title>');
+    writeFileSync(path.join(dir, 'app.js'), 'console.log(1)');
+    mkdirSync(path.join(dir, 'token'));
+    writeFileSync(path.join(dir, 'token', 'mum.json'), '{"name":"Mumbuca+"}');
+    const t = await setupApp({}, { staticDir: dir });
+
+    const meta = await t.app.inject({ method: 'GET', url: '/token/mum.json' });
+    expect(meta.statusCode).toBe(200);
+    expect(meta.json()).toEqual({ name: 'Mumbuca+' });
+    expect(meta.headers['access-control-allow-origin']).toBe('*');
+
+    const js = await t.app.inject({ method: 'GET', url: '/app.js' });
+    expect(js.headers['access-control-allow-origin']).toBeUndefined();
   });
 
   it('without staticDir unknown routes are JSON 404', async () => {

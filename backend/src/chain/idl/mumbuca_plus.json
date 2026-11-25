@@ -361,6 +361,87 @@
       ]
     },
     {
+      "name": "set_metadata_uri",
+      "docs": [
+        "Admin only: updates the Mum+ TokenMetadata `uri` (wallets read the logo from it)."
+      ],
+      "discriminator": [
+        30,
+        134,
+        3,
+        67,
+        40,
+        90,
+        245,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "Pays any extra rent when the metadata grows."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              }
+            ]
+          },
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "name": "set_minter",
       "discriminator": [
         13,
@@ -570,6 +651,11 @@
       "code": 6005,
       "name": "MathOverflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6006,
+      "name": "UriTooLong",
+      "msg": "Metadata URI exceeds 200 bytes"
     }
   ],
   "types": [
