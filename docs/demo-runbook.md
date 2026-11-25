@@ -38,27 +38,35 @@ Marque cada item e anote data e hora.
 - [ ] **Painel sem alerta de configuração.** O painel do operador não deve mostrar "Configuração on-chain divergente". O backend confere na subida que `config.minter` é a carteira emissora, que `max_mint_per_tx` (2000000) é pelo menos `MAX_RECHARGE_CENTS` e que o programa não está pausado; se algo não bater, o log mostra `ON-CHAIN PROGRAM CONFIG MISMATCH` e o painel lista o problema.
 - [ ] **Ensaio sandbox:** recarga de R$ 1.000, Simular, `Emitido`; ver 1.000 Mum+ na Phantom; abrir a transação no Solana Explorer (cluster devnet); clicar em Reprocessar e confirmar que nenhuma nova transação aparece. Anote a assinatura e a PDA de recibo.
 - [ ] **Ensaio simulado:** recarga `SIMULADO` de R$ 50, `Emitido`.
+- [ ] **Ensaio do visitante:** com a Phantom em Devnet, Entrar com Phantom, Criar conta, ＋ Comprar Mum+ (R$ 11), Gerar Pix, Pagar agora (demonstração); ver os Mum+ na Phantom e no Explorer.
 - [ ] **Ensaio live (se houver chave live):** `PROVIDER_ENV=live`, chave e IDs live, `MIN_RECHARGE_CENTS=1100`, `MAX_RECHARGE_CENTS=2000000`; recarga de R$ 11 paga via Pix pelo dono; esperar `Emitido` com 11 Mum+. Se falhar, registre o motivo aqui e use o sandbox como caminho principal.
 - [ ] **Vídeo de contingência gravado** (seção 6) e embutido no PPT.
 - [ ] Internet do local conferida e plano B (celular como roteador).
 
 ## 3. Roteiro da apresentação
 
-1. **Login** com `DEMO_PASSWORD` e **visão da cidadã**, com o saldo atual em Mum+.
-2. **Caminho garantido:**
-   - recarga sandbox de R$ 1.000 (parceiro de liquidez);
-   - no painel do operador, clicar em **Simular pagamento**;
-   - os estados avançam até **Emitido**;
-   - mostrar os 1.000 Mum+ na Phantom (devnet);
-   - abrir a transação no **Solana Explorer** e mostrar a **PDA de recibo** do pagamento.
-3. **Ponto alto (somente se o ensaio live passou):** recarga de R$ 11 com Pix real, pago ao vivo, com emissão automática.
-4. **Idempotência:** clicar em **Reprocessar** no pagamento já emitido e mostrar que nada novo é emitido (mesma assinatura, saldo igual). Isso demonstra a idempotência do **banco de dados**: o pagamento já está `Emitido` e o backend nem chega a falar com a rede. Para a **prova on-chain**: abrir no Solana Explorer a **PDA de recibo** do pagamento (ela só existe porque a emissão ocorreu) ou, no terminal, repetir `npm run smoke:mint -w backend -- <PUBKEY> 100 <PAYMENT_REF>` com um `payment_ref` já usado (veja [solana-deploy.md](solana-deploy.md), seção 6): a rede rejeita com `PaymentRefAlreadyUsed`, porque a PDA de recibo já existe.
-5. **Contingência** (seção 4): parceiro fora, usar `SIMULADO`; sem internet, vídeo gravado.
+O caminho principal é o **Simulado**: nenhum dinheiro real e nenhuma dependência do parceiro de liquidez. Site: https://mumbuca-plus-production.up.railway.app
+
+1. **Operador (senha).** Na tela de entrada, clique em **Sou operador** e entre com `DEMO_PASSWORD`. Mostre o painel: saldo de SOL da minter, estado do programa ("Ativo") e a lista de pagamentos.
+2. **Visitante (Phantom).** Em outra janela ou no celular, com a Phantom em Devnet (Settings, Developer settings, Testnet mode, Solana Devnet):
+   - clique em **Entrar com Phantom** (assina uma mensagem; nenhuma transação é autorizada);
+   - na primeira vez, clique em **Criar conta** e escolha um nome de exibição;
+   - clique em **＋ Comprar Mum+**, escolha um valor (R$ 11 a R$ 100) e clique em **Gerar Pix**;
+   - clique em **Pagar agora (demonstração)**;
+   - os estados avançam até **Emitido** e os Mum+ aparecem na Phantom (Devnet).
+3. **Solana Explorer.** Abra a transação no Explorer (cluster devnet) e mostre a **PDA de recibo** do pagamento.
+4. **Painel do operador.** Volte ao painel e mostre o pagamento do visitante, com a assinatura e o estado **Emitido**.
+5. **Idempotência:** clicar em **Reprocessar** no pagamento já emitido e mostrar que nada novo é emitido (mesma assinatura, saldo igual). Isso demonstra a idempotência do **banco de dados**: o pagamento já está `Emitido` e o backend nem chega a falar com a rede. Para a **prova on-chain**: abrir no Solana Explorer a **PDA de recibo** do pagamento (ela só existe porque a emissão ocorreu) ou, no terminal, repetir `npm run smoke:mint -w backend -- <PUBKEY> 100 <PAYMENT_REF>` com um `payment_ref` já usado (veja [solana-deploy.md](solana-deploy.md), seção 6): a rede rejeita com `PaymentRefAlreadyUsed`, porque a PDA de recibo já existe.
+6. **Opcional (parceiro real):** só se o ensaio live passou, recarga de R$ 11 com Pix real, pago ao vivo, com emissão automática. O `OZAV` é o parceiro de liquidez real e opcional; a demonstração não depende dele.
+7. **Contingência** (seção 4): compras pausadas, parceiro fora, sem internet (vídeo gravado).
+
+Limites do visitante: R$ 11 a R$ 100 por compra, 3 compras por carteira a cada 24 h, R$ 2.000 por 24 h somando todos os visitantes, 1 compra pendente por vez. Uma compra não paga expira em 30 minutos.
 
 ## 4. Contingências
 
 | Problema | O que fazer |
 | --- | --- |
+| Visitante vê "compras pausadas" | As compras de visitantes pausam sozinhas quando o SOL da minter está baixo, quando a emissão está pausada, quando a configuração on-chain diverge ou quando `VISITOR_SIGNIN_ENABLED=false`. (1) Recarregue a minter com SOL da devnet: `solana transfer <MINTER_PUBKEY> 1 --allow-unfunded-recipient` ou https://faucet.solana.com (cada emissão nova gasta cerca de 0,004 SOL). (2) Confira `VISITOR_SIGNIN_ENABLED` no painel do Railway (deve ser `true` ou estar ausente). (3) Confira o painel do operador: se mostrar "Pausado", veja a linha do programa pausado; se mostrar "Configuração on-chain divergente", veja a linha seguinte. |
 | Parceiro de liquidez fora do ar ou Pix não confirma | Criar a recarga com o provedor `SIMULADO` (R$ 11 a R$ 20.000) e clicar em Simular pagamento. O caminho on-chain é o mesmo. O `SIMULADO` continua disponível mesmo com `PROVIDER_ENV=live` (atrás da senha da demonstração; emite tokens de devnet). A consulta ao parceiro feita pelo reconciler corre fora da fila de processamento, então um parceiro lento não atrasa o `SIMULADO`. |
 | Sem internet no local | Passar o vídeo gravado (seção 6) no PPT. |
 | SOL da minter baixo (alerta no painel) | Enviar SOL: `solana transfer <MINTER_PUBKEY> 1 --allow-unfunded-recipient` ou faucet https://faucet.solana.com. Pagamentos que falharam por falta de saldo voltam a ser processados pelo reconciler ou por Reprocessar. |
@@ -98,6 +106,12 @@ Modelo em `backend/.env.example`. Nenhum valor aqui.
 | `RPC_TIMEOUT_MS` | Tempo máximo de cada chamada ao RPC da Solana, em ms (padrão 12000). Uma chamada travada vira erro temporário e é tentada de novo. |
 | `MAX_MINT_ATTEMPTS` | Rejeições definitivas do programa (por exemplo `CapExceeded`) antes de o pagamento ser marcado como `FAILED` (padrão 5). Erros temporários de rede não contam. Programa pausado, minter não autorizada (`Unauthorized`) e erros desconhecidos do programa também não contam: o pagamento fica `APPROVED` aguardando a correção. |
 | `LOW_SOL_THRESHOLD_LAMPORTS` | Saldo da minter abaixo do qual o painel alerta (padrão 100000000). |
+| `VISITOR_MIN_CENTS` | Opcional. Compra mínima do visitante, em centavos (padrão 1100). |
+| `VISITOR_MAX_CENTS` | Opcional. Compra máxima do visitante, em centavos (padrão 10000). |
+| `VISITOR_MAX_PURCHASES_PER_DAY` | Opcional. Compras por carteira a cada 24 h (padrão 3). |
+| `VISITOR_DAILY_CAP_CENTS` | Opcional. Teto de compras somando todos os visitantes em 24 h, em centavos (padrão 200000). |
+| `VISITOR_SIGNUPS_PER_IP_PER_DAY` | Opcional. Contas novas por IP a cada 24 h (padrão 5). |
+| `VISITOR_SIGNIN_ENABLED` | Opcional. `false` desliga o login e as compras de visitantes (padrão `true`). |
 | `LOG_LEVEL` | Opcional: nível de log (padrão `info`). |
 | `NODE_ENV` | Em produção use `production` (cookie de sessão seguro, só HTTPS). Local sobre http: `development`. |
 
@@ -105,6 +119,6 @@ Modelo em `backend/.env.example`. Nenhum valor aqui.
 
 1. Use o ambiente sandbox, com a checklist toda verde. Feche notificações; deixe o navegador em tela cheia e a Phantom em devnet.
 2. Grave a tela (OBS Studio, ou Win+Alt+R no Windows) em 1080p, com microfone se for narrar.
-3. Siga o roteiro da seção 3: login, visão da cidadã, recarga de R$ 1.000, Simular, estados até Emitido, Phantom com o saldo, Solana Explorer com a transação e a PDA de recibo, Reprocessar sem nova emissão. Se o ensaio live passou, inclua o Pix de R$ 11.
+3. Siga o roteiro da seção 3: operador com senha, visitante com Phantom (Comprar Mum+, Pagar agora), estados até Emitido, Phantom com o saldo, Solana Explorer com a transação e a PDA de recibo, Reprocessar sem nova emissão. Se o ensaio live passou, inclua o Pix de R$ 11.
 4. Mostre a barra de endereço (URL do Railway) e o cluster devnet no explorador; não mostre `MINTER_SECRET_KEY`, chaves de API nem o painel de variáveis do Railway.
 5. Exporte em MP4, teste no computador da apresentação sem internet, incorpore ao PPT e guarde uma cópia no celular.

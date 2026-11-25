@@ -65,6 +65,22 @@ Cada compra também apoia a cultura local. Na prova de conceito, os benefícios 
 7. Nenhum pagamento gera emissão duplicada, mesmo com reenvios, quedas de rede ou reinícios do servidor.
 8. Com Mum+, o visitante gasta na rede credenciada de Maricá e aproveita os benefícios e descontos do programa.
 
+### Teste você mesmo
+
+Site: https://mumbuca-plus-production.up.railway.app
+
+1. Na Phantom, ative a Devnet: Settings → Developer settings → Testnet mode → Solana Devnet.
+2. No site, clique em **Entrar com Phantom**. Você assina uma mensagem. Nenhuma transação é autorizada.
+3. Clique em **Criar conta** e escolha um nome de exibição.
+4. Clique em **＋ Comprar Mum+**, escolha um valor e clique em **Gerar Pix**.
+5. Clique em **Pagar agora (demonstração)**.
+6. Os Mum+ aparecem na Phantom (Devnet) e no Solana Explorer.
+
+Nenhum dinheiro real é usado; tudo roda na Solana devnet.
+
+Limites: de R$ 11 a R$ 100 por compra, 3 compras por carteira a cada 24 h e 1 compra pendente por vez. Uma compra não paga expira em 30 minutos.
+
+
 ## 3. A rota do dinheiro: BRL → BRS → Mumbuca+
 
 ```mermaid
@@ -221,6 +237,9 @@ flowchart TB
 | Serviço de emissão | Simula, envia `mint`, acompanha a confirmação e recupera falhas sem duplicar |
 | Banco de transações | Histórico completo e auditável de cada pagamento e transição |
 | Dashboard | "Minha carteira" do visitante (saldo, compra de Mum+, benefícios em Maricá, histórico) e visão do operador (todos os pagamentos, assinaturas, ações) |
+
+**Login e escopo.** O visitante entra por assinatura de mensagem (estilo SIWS): o servidor emite um desafio com nonce de uso único, válido por 5 minutos e guardado no servidor, e confere a assinatura ed25519. A sessão carrega um papel (operador ou visitante), e o servidor limita cada requisição do visitante aos próprios dados: recurso de outra pessoa responde 404 e rota de operador responde 403. O visual usa o [Spell UI](https://spell.sh) (MIT): AnimatedGradient e PopButton.
+
 
 **Tecnologias:** Rust e Anchor 1.2 (programa), SPL Token-2022 com metadata on-chain (token), Solana CLI (implantação), Node.js 22, TypeScript, Fastify e Postgres (backend), `@solana/web3.js` (blockchain), React e Vite (dashboard), Phantom (carteira), Railway (hospedagem).
 
