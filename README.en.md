@@ -52,7 +52,7 @@ The report proposes a **tokenized dual wallet**. This repository builds its **te
 - dining;
 - lodging;
 - culture and cinema;
-- local shops.
+- local shops, with 5% cashback on purchases.
 
 Every purchase also supports local culture. In the proof of concept, the benefits shown in the app are **illustrative**.
 
@@ -103,6 +103,22 @@ flowchart LR
 
 End to end, **value is always denominated in reais**: BRL, then BRS (tokenized real), then Mum+ (a social currency pegged to the real). **No leg involves a foreign currency.** And the whole route runs on a single network: BRS and Mum+ both live on Solana.
 
+### Reserve and yield management
+
+The reserve backing Mum+ does not sit idle. The proposal's model is:
+
+| Portion | Where it sits | Why |
+|---|---|---|
+| **Backing (100% of Mum+ in circulation)** | Floating-rate Brazilian federal government bonds (Tesouro Selic) and cash in reais | To guarantee 1:1 redemption at any time: these are highly liquid, sovereign-risk assets |
+| **Surplus (anything above 100%)** | Part of it in *staking* on the Solana network | Extra yield without putting the backing at risk, since staking has unbonding periods and protocol risk |
+
+**The yield belongs to the issuer, not the holder.** Bond interest and staking rewards stay with the program operator and fund:
+- the **5% cashback** on purchases in the accredited network;
+- the share earmarked for **cinema and culture** in Maricá;
+- operating costs.
+
+A Mum+ holder **receives nothing for holding a balance**. Benefits come only from **spending** in the accredited network. This separation supports the legal thesis in section 5: with no expectation of profit for the holder, Mum+ is not a security.
+
 > **Environments:** the same BRL → BRS → Mumbuca+ route runs in the partner's test environment (simulated Pix) and in production (real Pix, minimum R$ 11). The reserve asset (BRS) is set by a single environment variable.
 
 ## 4. Liquidity and compliance partner
@@ -146,11 +162,13 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
    - It is accepted only within Maricá's accredited network.
    - It gives visitors the benefits and discounts defined by the program's governor: dining, lodging, culture and cinema, local shops.
    - Like loyalty points and rewards, it has value within an ecosystem defined by whoever administers it.
-   - The report foresees further rules of the same kind, such as the 5% incentive for local commerce.
+   - The 5% cashback on purchases in the accredited network is of the same kind: a spending benefit, as in a loyalty program.
 3. **There is no investment purpose.**
    - The peg is fixed (1 Mum+ = R$ 1.00).
-   - There is no yield, no appreciation, no public offering and no secondary market promoted by the issuer.
-   - In Guidance Opinion 40/2022, the Brazilian Securities Commission (CVM) separates utility tokens from tokens that are securities by the absence of an expectation of profit from the efforts of others.
+   - The holder receives no yield, appreciation, interest or share of profits.
+   - There is no public offering and no secondary market promoted by the issuer.
+   - The reserve's yield (government bonds and staking of the surplus) belongs to the issuer and pays spending benefits, never a return on balances.
+   - In Guidance Opinion 40/2022, the Brazilian Securities Commission (CVM) separates utility tokens from tokens that are securities by the absence of an expectation of profit from the efforts of others. Section 5.3 applies the Howey Test element by element.
 4. **No virtual asset means no virtual-asset FX.**
    - Article 76-A of Central Bank Resolution 277/2022, added by Resolution 521/2025, brings the *provision of virtual-asset services* into the foreign-exchange market.
    - Because Mum+ is not a virtual asset, its issuance and circulation fall outside that rule.
@@ -167,14 +185,44 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 | Reserve | BRS | real-referenced asset | Liquidity partner, under the virtual-asset service provider regime |
 | Use | Mum+ | social-currency utility token | City of Maricá and Banco Comunitário Mumbuca |
 
-### 5.3 How the technical design reinforces the thesis
+### 5.3 The Howey Test: Mum+ is not a security
+
+The **Howey Test** (*SEC v. W. J. Howey Co.*, 328 U.S. 293, 1946) is the classic test for whether something is an investment contract, that is, a security. Brazilian law follows the same logic in the concept of a **collective investment contract** in Law 6,385/1976, Article 2, item IX: a publicly offered instrument or contract that gives a right to participation, partnership or remuneration *"whose returns come from the efforts of the entrepreneur or of third parties"*. The CVM applies this reasoning to crypto-assets in Guidance Opinion 40/2022.
+
+There is a security only when **all four elements** are present at once:
+
+| Howey element | For Mum+ | Present? |
+|---|---|---|
+| 1. Investment of money | There is a payment in reais, but for **consumption**: the visitor receives the same value in Mum+ to spend in the network. When the purchase is motivated by use or consumption, there is no investment (*United Housing Foundation v. Forman*, 421 U.S. 837, 1975) | Payment, but not an investment |
+| 2. Common enterprise | Each holder's balance does not depend on the results of a common pool: 1 Mum+ is worth R$ 1.00 regardless of how the reserve performs | No |
+| 3. **Expectation of profit** | No interest, yield, appreciation or profit share. The reserve's yield stays with the issuer. Benefits (discounts and 5% cashback) depend on **spending**, not on the balance held | **No** |
+| 4. Profit from the efforts of others | With no profit for the holder, there is no profit from others' efforts | No |
+
+Without an expectation of profit the test fails, and Mum+ **is not a security**. It remains an instrument of access to specified benefits (Law 14,478/2022, Article 3, item III).
+
+The same criterion is applied abroad to fixed-peg tokens backed by government bonds: in 2025 the SEC's Division of Corporation Finance took the view that stablecoins backed by liquid assets, redeemable 1:1 and **paying no yield to holders** are not securities.
+
+**Rules that keep Mum+ outside Howey (which the project commits to):**
+- **No yield on balances.** Cashback and discounts are always proportional to **spending** in the accredited network, never to the balance held or time in the wallet.
+- **Staking belongs to the issuer.** It applies to the reserve surplus and is not offered to holders. There is no "stake" button for visitors and no reward for locking Mum+.
+- **Consumption messaging.** Mum+ is never promoted as an investment, an application of funds or a way to make money.
+- **Fixed peg and 1:1 redemption.** With no possible appreciation, there is no capital gain.
+
+If holders ever started receiving part of the yield for holding a balance, element 3 would be present and Mum+ would have to be treated as a security, under the CVM. That is why this line stays out of the product.
+
+### 5.4 How the technical design reinforces the thesis
 
 - **DvP (Delivery versus Payment):** Mum+ is delivered only against confirmed settlement in reais. There is no pre-minting, pre-sale or public offering. Supply is created exclusively from payments settled and validated at the source.
 - **Fixed peg, no price formation:** the system runs no order book, no quotes and no trading.
 - **On-chain governance by the ecosystem governor:** the admin and pauser roles belong to the governor, who can suspend issuance and adjust limits.
 - **Utility specified in code:** the next step is to restrict Mum+ transfers to accredited wallets (accredited merchants and visitor wallets) with a Token-2022 *transfer hook*. That makes the "specified utility" of Article 3, item III verifiable on-chain.
 
-### 5.4 Anticipated objections
+### 5.5 Anticipated objections
+
+- **"A reserve invested in government bonds and staking produces an economic gain, so Mum+ is a security."**
+  - The gain exists, but it belongs to the **issuer**, who manages the reserve.
+  - Under Howey what matters is the **holder's** expectation of profit, and there is none: the holder gets exactly R$ 1.00 per Mum+ and benefits only when spending.
+  - It is the same arrangement as an institution that invests customers' account balances and keeps the yield.
 
 - **"A real-pegged token accepted across a network is a means of payment."**
   - Mum+ circulates only within an accredited network defined by the public governor, as access to a program benefit. That is exactly the case covered by Article 3, item III.
@@ -193,6 +241,7 @@ Mumbuca+ **does not hold money, convert currencies or process Pix itself**. Thos
 | **DvP (Delivery versus Payment)** | The asset (Mum+) is delivered only after the payment (BRL) settles, which removes principal risk: nobody receives tokens without having paid |
 | **Settlement finality** | BRL counts as settled only on the partner's official status. Mum+ counts as delivered only after the transaction is confirmed on the network (`confirmed` commitment) |
 | **1:1 backing and segregated reserve** | Each Mum+ corresponds to R$ 1.00 received, held as BRS in the partner's segregated custody |
+| **Reserve management (treasury)** | Backing in floating-rate federal government bonds and cash, highly liquid for 1:1 redemption. Only the surplus goes to staking. The yield belongs to the issuer and funds the 5% cashback and culture |
 | **Golden source** | The partner's API is the official source for the payment. The webhook only notifies and never decides |
 | **Idempotency and exactly-once** | Each payment produces at most one issuance, guaranteed by the database and the program (one on-chain receipt per `paymentRef`) |
 | **Continuous reconciliation** | A reconciler periodically compares local state with the partner and the chain, and resumes anything pending |
@@ -440,8 +489,8 @@ Before each issuance, the program checks that:
 | Financial inclusion | Works with Pix and a digital wallet, without a traditional bank account |
 | Operational sustainability | Less manual service and physical logistics, plus own revenue from selling Mum+ to visitors and from partnerships |
 | Tourism | Visitors buy Mum+ and spend it in Maricá's accredited network, with benefits and discounts |
-| Culture | Under the proposal, part of the operation's profit goes to cinema and culture in the city |
-| Local economy | Mum+ is the layer for territory and incentive rules (5% for local commerce, controlled external credit; future modules in the report) |
+| Culture | Under the proposal, part of the operation's profit, including the reserve's yield, goes to cinema and culture in the city |
+| Local economy | Mum+ is the layer for territory and incentive rules: 5% cashback on purchases in the accredited network, paid from the reserve's yield, and controlled external credit (a future module in the report) |
 | Transparency and oversight | Management dashboard plus a public explorer for oversight bodies |
 
 ## 13. Proof-of-concept scope
@@ -457,7 +506,8 @@ Before each issuance, the program checks that:
 
 **Future phases:**
 - Restricting transfers to accredited wallets (Token-2022 transfer hook).
-- Dual wallet and the 5% incentive.
+- Dual wallet and 5% cashback on spending.
+- Reserve management: investing the backing in federal government bonds and staking the surplus, with the yield going to cashback and culture.
 - 25% external credit.
 - Own card terminals.
 - AI assistant.
@@ -537,6 +587,9 @@ See [docs/solana-deploy.md](docs/solana-deploy.md) (in Portuguese).
 - Brazil. **Law 13,709/2018** (LGPD), personal data protection.
 - Central Bank of Brazil. **Resolutions 519, 520 and 521/2025**, covering virtual-asset service providers and the inclusion of virtual-asset operations in the foreign-exchange market (Art. 76-A of Resolution 277/2022). [Resolution 521 text](https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=521)
 - Brazilian Securities Commission (CVM). **Guidance Opinion 40/2022**, crypto-assets and the securities market.
+- Brazil. **Law 6,385/1976**, Article 2, item IX: collective investment contracts as securities.
+- U.S. Supreme Court. ***SEC v. W. J. Howey Co.***, 328 U.S. 293 (1946), the Howey Test, and ***United Housing Foundation v. Forman***, 421 U.S. 837 (1975), on purchases motivated by consumption.
+- SEC, Division of Corporation Finance. ***Statement on Stablecoins*** (2025), on stablecoins backed by liquid assets, redeemable 1:1 and paying no yield to holders.
 - FATF. **Recommendation 16** (Travel Rule) and guidance on virtual assets and VASPs.
 - Central Bank of Brazil. Presentation on social currencies and community banks. [bcb.gov.br](https://www.bcb.gov.br/pre/microFinancas/arquivos/horario_arquivos/apres_62.pdf)
 - Revista Pesquisa FAPESP. *Bancos comunitários impulsionam o desenvolvimento local*. [revistapesquisa.fapesp.br](https://revistapesquisa.fapesp.br/bancos-comunitarios-impulsionam-o-desenvolvimento-local/)

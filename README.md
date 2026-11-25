@@ -52,7 +52,7 @@ O relatório propõe uma **carteira dupla tokenizada**. Este repositório constr
 - gastronomia;
 - hospedagem;
 - cultura e cinema;
-- comércio local.
+- comércio local, com cashback de 5% nas compras.
 
 Cada compra também apoia a cultura local. Na prova de conceito, os benefícios exibidos no app são **ilustrativos**.
 
@@ -99,6 +99,22 @@ flowchart LR
 
 Do começo ao fim, **o valor está sempre denominado em reais**: BRL, depois BRS (real tokenizado) e por fim Mum+ (moeda social com paridade com o real). **Nenhuma perna envolve moeda estrangeira.** E a rota inteira roda numa única rede: o BRS e o Mum+ estão ambos na Solana.
 
+### Gestão da reserva e do rendimento
+
+A reserva que lastreia o Mum+ não fica parada. O modelo da proposta é:
+
+| Parcela | Onde fica | Para quê |
+|---|---|---|
+| **Lastro (100% do Mum+ em circulação)** | Títulos públicos federais pós-fixados (Tesouro Selic) e caixa em reais | Garantir o resgate 1:1 a qualquer momento: são ativos de alta liquidez e risco soberano |
+| **Excedente (o que passa de 100%)** | Uma parte em *staking* na rede Solana | Rendimento adicional, sem comprometer o lastro, já que o *staking* tem prazo de resgate e risco de protocolo |
+
+**O rendimento é do emissor, não do titular.** Os juros dos títulos e as recompensas do *staking* ficam com o operador do programa e financiam:
+- o **cashback de 5%** nas compras feitas na rede credenciada;
+- a parcela destinada a **cinema e cultura** em Maricá;
+- os custos de operação.
+
+O titular de Mum+ **não recebe nada por ter saldo**. Ele só ganha benefícios quando **consome** na rede credenciada. Essa separação sustenta a tese jurídica da seção 5: sem expectativa de lucro do titular, o Mum+ não é valor mobiliário.
+
 > **Ambientes:** a mesma rota BRL → BRS → Mumbuca+ roda no ambiente de testes do parceiro (Pix simulado) e no ambiente real (Pix de verdade, mínimo de R$ 11). O ativo de reserva (BRS) é definido por uma única variável de ambiente.
 
 ## 4. Parceiro de liquidez e compliance
@@ -140,8 +156,14 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
    - Ele só é aceito na rede credenciada de Maricá.
    - Dá ao visitante os benefícios e descontos definidos pelo gestor do programa: gastronomia, hospedagem, cultura e cinema, comércio local.
    - Como os pontos e recompensas de um programa de fidelidade, ele vale dentro de um ecossistema definido por quem o administra.
-   - O relatório prevê outras regras da mesma natureza, como o incentivo de 5% no comércio local.
-3. **Não há propósito de investimento.** A paridade é fixa (1 Mum+ = R$ 1,00) e não há rendimento, valorização, oferta pública nem mercado secundário promovido pelo emissor. A CVM, no Parecer de Orientação nº 40/2022, separa os tokens de utilidade dos tokens que são valores mobiliários pela ausência de expectativa de retorno sobre o esforço de terceiros.
+   - O cashback de 5% nas compras na rede credenciada é da mesma natureza: um benefício de consumo, como num programa de fidelidade.
+3. **Não há propósito de investimento.**
+   - A paridade é fixa (1 Mum+ = R$ 1,00).
+   - O titular não recebe rendimento, valorização, juros nem participação nos resultados.
+   - Não há oferta pública nem mercado secundário promovido pelo emissor.
+   - O rendimento da reserva (títulos públicos e *staking* do excedente) é do emissor e paga benefícios de consumo, nunca remuneração por saldo.
+
+   A CVM, no Parecer de Orientação nº 40/2022, separa os tokens de utilidade dos tokens que são valores mobiliários pela ausência de expectativa de retorno sobre o esforço de terceiros. A seção 5.3 aplica o Teste de Howey item por item.
 4. **Sem "ativo virtual", não há câmbio de ativo virtual.** O art. 76-A da Resolução BCB nº 277/2022, incluído pela Resolução BCB nº 521/2025, leva ao mercado de câmbio a *prestação de serviços de ativos virtuais*. Como o Mum+ não é ativo virtual, a emissão e a circulação dele não entram nessa regra. Além disso, nenhuma etapa da rota envolve moeda estrangeira.
 5. **Quem regula o token é o gestor do ecossistema.** A Mumbuca é uma moeda social instituída e disciplinada pelo Município de Maricá (o relatório cita a Lei Municipal nº 3.673/2025) e operada pelo Banco Comunitário Mumbuca. Credenciamento de lojistas, regras de uso, limites e emissão contra entrada de reais são decisões desse gestor. O Mumbuca+ só leva essas regras para um token. As moedas sociais seguem esse modelo desde o Banco Palmas (1998): **lastro em reais, paridade 1:1, circulação territorial e ausência de curso forçado**, como descreve o próprio Banco Central.
 6. **Cada camada tem o seu regulador.** A operação financeira fica com quem é regulado para ela:
@@ -152,14 +174,41 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 | Reserva | BRS | ativo referenciado no real | Parceiro de liquidez, no regime de prestadores de serviços de ativos virtuais |
 | Uso | Mum+ | utility token da moeda social | Município de Maricá e Banco Comunitário Mumbuca |
 
-### 5.3 Como o desenho técnico reforça a tese
+### 5.3 Teste de Howey: o Mum+ não é valor mobiliário
+
+O **Teste de Howey** (*SEC v. W. J. Howey Co.*, 328 U.S. 293, 1946) é o critério clássico para saber se algo é um contrato de investimento, ou seja, um valor mobiliário (*security*). O direito brasileiro adota a mesma lógica no conceito de **contrato de investimento coletivo** da Lei nº 6.385/1976, art. 2º, IX: título ou contrato ofertado publicamente que gera direito de participação, parceria ou remuneração, *"cujos rendimentos advêm do esforço do empreendedor ou de terceiros"*. A CVM aplica esse raciocínio aos criptoativos no Parecer de Orientação nº 40/2022.
+
+Só há valor mobiliário quando os **quatro elementos** estão presentes ao mesmo tempo:
+
+| Elemento do Howey | No Mum+ | Presente? |
+|---|---|---|
+| 1. Investimento de dinheiro | Há pagamento em reais, mas para **consumo**: o visitante recebe o mesmo valor em Mum+ para gastar na rede. Quando a motivação da compra é usar ou consumir, não há investimento (*United Housing Foundation v. Forman*, 421 U.S. 837, 1975) | Há pagamento, mas não aplicação |
+| 2. Empreendimento comum | O saldo de cada titular não depende do resultado de um fundo comum: 1 Mum+ vale R$ 1,00 independentemente do desempenho da reserva | Não |
+| 3. **Expectativa de lucro** | Não há juros, rendimento, valorização nem participação nos resultados. O rendimento da reserva fica com o emissor. Os benefícios (descontos e cashback de 5%) dependem do **consumo**, não do saldo mantido | **Não** |
+| 4. Lucro vindo do esforço de terceiros | Como não há lucro para o titular, não há lucro vindo de terceiros | Não |
+
+Faltando a expectativa de lucro, o teste falha, e o Mum+ **não é valor mobiliário**. Ele continua sendo instrumento de acesso a benefícios especificados (Lei nº 14.478/2022, art. 3º, III).
+
+O mesmo critério é usado lá fora para tokens com paridade fixa e lastro em títulos públicos: em 2025, a Divisão de Finanças Corporativas da SEC entendeu que stablecoins lastreadas em ativos líquidos, resgatáveis 1:1 e **sem rendimento ao titular** não são valores mobiliários.
+
+**Regras que mantêm o Mum+ fora do Howey (e que o projeto se obriga a seguir):**
+- **Nenhum rendimento por saldo.** Cashback e descontos são sempre proporcionais ao **consumo** na rede credenciada, nunca ao saldo mantido ou ao tempo de carteira.
+- **O *staking* é do emissor.** Ele incide sobre o excedente da reserva e não é oferecido ao titular. Não existe botão de "stake" para o visitante nem remuneração pelo travamento de Mum+.
+- **Comunicação de consumo.** O Mum+ nunca é divulgado como investimento, aplicação ou forma de ganhar dinheiro.
+- **Paridade fixa e resgate 1:1.** Sem valorização possível, não há ganho de capital.
+
+Se algum dia o titular passar a receber parte do rendimento por ter saldo, o elemento 3 passa a existir e o Mum+ precisaria ser tratado como valor mobiliário, sob a CVM. Por isso essa linha fica fora do produto.
+
+### 5.4 Como o desenho técnico reforça a tese
 
 - **DvP (Delivery versus Payment):** o Mum+ só é entregue contra liquidação confirmada em reais. Não existe pré-emissão, pré-venda ou oferta pública: o supply nasce exclusivamente de pagamentos liquidados e validados na fonte.
 - **Paridade fixa e sem formação de preço:** não há livro de ofertas, cotação nem negociação promovida pelo sistema.
 - **Governança on-chain do gestor:** os papéis de administrador e pausador ficam com o gestor do ecossistema, que pode suspender emissões e ajustar limites.
 - **Utilidade especificada no código:** o próximo passo é restringir as transferências do Mum+ a carteiras credenciadas (lojistas credenciados e carteiras de visitantes) com um *transfer hook* do Token-2022. Isso materializa on-chain a "utilidade especificada" do art. 3º, III.
 
-### 5.4 Objeções antecipadas
+### 5.5 Objeções antecipadas
+
+- **"A reserva aplicada em títulos públicos e em *staking* gera ganho econômico, então o Mum+ é security."** O ganho existe, mas é do **emissor**, que administra a reserva. Pelo Howey, o que importa é a expectativa de lucro **do titular**, e ela não existe: o titular recebe exatamente R$ 1,00 por Mum+ e só tem benefícios ao consumir. É o mesmo arranjo de uma instituição que aplica o saldo em conta dos clientes e fica com o rendimento.
 
 - **"Um token com paridade em real, aceito na rede, é meio de pagamento."** O Mum+ circula só numa rede credenciada e definida pelo gestor público, para acesso a um benefício de programa, exatamente a hipótese do art. 3º, III. A restrição de transferências a carteiras credenciadas torna essa delimitação verificável on-chain.
 - **"Município não pode emitir moeda."** E o Mum+ não é moeda. Emitir moeda é competência da União (CF, art. 21, VII), e legislar sobre sistema monetário é privativo dela (CF, art. 22, VI). O Mum+ é instrumento de um programa municipal, **sem curso forçado**: ninguém é obrigado a aceitá-lo.
@@ -172,6 +221,7 @@ O **Mumbuca+ (Mum+) é um token de utilidade (utility token)** do ecossistema da
 | **DvP (Delivery versus Payment)** | O ativo (Mum+) só é entregue depois da liquidação do pagamento (BRL), eliminando o risco de principal: ninguém recebe token sem ter pago |
 | **Finalidade de liquidação** | O BRL é considerado liquidado só pelo status oficial do parceiro, e o Mum+ só é considerado entregue após a confirmação da transação na rede (commitment `confirmed`) |
 | **Lastro 1:1 e reserva segregada** | Cada Mum+ corresponde a R$ 1,00 recebido, mantido como BRS em custódia segregada do parceiro |
+| **Gestão de reserva (*treasury*)** | Lastro em títulos públicos federais pós-fixados e caixa, com alta liquidez para o resgate 1:1. Só o excedente vai para *staking*. O rendimento é do emissor e financia o cashback de 5% e a cultura |
 | **Fonte da verdade (*golden source*)** | A API do parceiro é a fonte oficial do pagamento. O webhook só avisa e nunca decide |
 | **Idempotência e exactly-once** | Cada pagamento gera no máximo uma emissão, garantida pelo banco de dados e pelo programa (um recibo on-chain por `paymentRef`) |
 | **Reconciliação contínua** | Um reconciliador compara periodicamente o estado local com o do parceiro e o da blockchain, e retoma o que ficou pendente |
@@ -400,8 +450,8 @@ Antes de cada emissão, o programa confere que:
 | Inclusão financeira | Funciona com Pix e carteira digital, sem conta bancária tradicional |
 | Sustentabilidade operacional | Menos atendimento manual e logística física, e receita própria com a venda de Mum+ a visitantes e com parcerias |
 | Turismo | Visitantes compram Mum+ e gastam na rede credenciada de Maricá, com benefícios e descontos |
-| Cultura | Na proposta, parte do lucro da operação é revertida para cinema e cultura na cidade |
-| Economia local | O Mum+ é a camada das regras de território e incentivo (5% no comércio local e crédito externo controlado, módulos futuros do relatório) |
+| Cultura | Na proposta, parte do lucro da operação, inclusive o rendimento da reserva, é revertida para cinema e cultura na cidade |
+| Economia local | O Mum+ é a camada das regras de território e incentivo: cashback de 5% nas compras na rede credenciada, pago com o rendimento da reserva, e crédito externo controlado (módulo futuro do relatório) |
 | Transparência e controle | Painel de gestão e explorador público para órgãos de controle |
 
 ## 13. Escopo da prova de conceito
@@ -417,7 +467,8 @@ Antes de cada emissão, o programa confere que:
 
 **Fica para fases futuras:**
 - Restrição de transferências a carteiras credenciadas (transfer hook do Token-2022).
-- Carteira dupla e incentivo de 5%.
+- Carteira dupla e cashback de 5% no consumo.
+- Gestão da reserva: aplicação do lastro em títulos públicos federais e *staking* do excedente, com o rendimento destinado ao cashback e à cultura.
 - Crédito externo de 25%.
 - Maquininhas próprias.
 - Assistente de IA.
@@ -497,6 +548,9 @@ O `railway.json` na raiz configura build, start e healthcheck. O passo a passo d
 - Brasil. **Lei nº 13.709/2018** (LGPD), proteção de dados pessoais.
 - Banco Central do Brasil. **Resoluções BCB nº 519, 520 e 521/2025**, sobre prestadores de serviços de ativos virtuais e a inclusão de operações com ativos virtuais no mercado de câmbio (art. 76-A da Resolução BCB nº 277/2022). [Texto da Resolução BCB nº 521](https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=521)
 - Comissão de Valores Mobiliários. **Parecer de Orientação nº 40/2022**, criptoativos e o mercado de valores mobiliários.
+- Brasil. **Lei nº 6.385/1976**, art. 2º, IX: contrato de investimento coletivo como valor mobiliário.
+- Suprema Corte dos EUA. ***SEC v. W. J. Howey Co.***, 328 U.S. 293 (1946), o Teste de Howey, e ***United Housing Foundation v. Forman***, 421 U.S. 837 (1975), sobre compra motivada por consumo.
+- SEC, Division of Corporation Finance. ***Statement on Stablecoins*** (2025), sobre stablecoins lastreadas em ativos líquidos, resgatáveis 1:1 e sem rendimento ao titular.
 - GAFI/FATF. **Recomendação 16** (Travel Rule) e orientações sobre ativos virtuais e VASPs.
 - Banco Central do Brasil. Apresentação sobre moedas sociais e bancos comunitários. [bcb.gov.br](https://www.bcb.gov.br/pre/microFinancas/arquivos/horario_arquivos/apres_62.pdf)
 - Revista Pesquisa FAPESP. *Bancos comunitários impulsionam o desenvolvimento local*. [revistapesquisa.fapesp.br](https://revistapesquisa.fapesp.br/bancos-comunitarios-impulsionam-o-desenvolvimento-local/)
