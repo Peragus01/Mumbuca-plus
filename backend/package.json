@@ -17,7 +17,8 @@
     "init:program": "tsx scripts/init-program.ts",
     "smoke:mint": "tsx scripts/mint-smoke.ts",
     "pause:program": "tsx scripts/pause-program.ts --pause",
-    "unpause:program": "tsx scripts/pause-program.ts --unpause"
+    "unpause:program": "tsx scripts/pause-program.ts --unpause",
+    "set:metadata-uri": "tsx scripts/set-metadata-uri.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",

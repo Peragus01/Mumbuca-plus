@@ -191,6 +191,29 @@ impl Env {
         self.send(ix, &signer, &[&signer])
     }
 
+    fn set_uri(&mut self, signer: &Keypair, uri: &str) -> TransactionResult {
+        let ix = Instruction {
+            program_id: mumbuca_plus::ID,
+            accounts: mumbuca_plus::accounts::SetMetadataUri {
+                admin: signer.pubkey(),
+                config: config_pda(),
+                mint: mint_pda(),
+                token_program: Token2022::id(),
+                system_program: system_program::ID,
+            }
+            .to_account_metas(None),
+            data: mumbuca_plus::instruction::SetMetadataUri { uri: uri.to_string() }.data(),
+        };
+        let signer = signer.insecure_clone();
+        self.send(ix, &signer, &[&signer])
+    }
+
+    fn metadata(&self) -> TokenMetadata {
+        let acc = self.svm.get_account(&mint_pda()).expect("mint account");
+        let mint = StateWithExtensions::<SplMint>::unpack(&acc.data).unwrap();
+        mint.get_variable_len_extension::<TokenMetadata>().unwrap()
+    }
+
     fn pause(&mut self, signer: &Keypair) -> TransactionResult {
         self.pauser_ix(signer, mumbuca_plus::instruction::Pause {}.data())
     }
@@ -499,4 +522,43 @@ fn emits_minted_for_payment_event() {
     assert_eq!(event.amount, 1100);
     assert_eq!(event.payment_ref, pref(18));
     assert_eq!(event.slot, 100);
+}
+
+#[test]
+fn admin_sets_metadata_uri_and_mint_stays_rent_exempt() {
+    let mut env = Env::new();
+    let admin = env.admin.insecure_clone();
+    let long_uri = "https://mumbuca-plus-production.up.railway.app/token/mum.json?v=2026-11-25-logo-oficial-petroleo";
+
+    env.set_uri(&admin, long_uri).expect("set longer uri");
+    let md = env.metadata();
+    assert_eq!(md.uri, long_uri);
+    assert_eq!(md.name, "Mumbuca+");
+    assert_eq!(md.symbol, "Mum+");
+    let acc = env.svm.get_account(&mint_pda()).unwrap();
+    assert!(acc.lamports >= env.svm.minimum_balance_for_rent_exemption(acc.data.len()));
+
+    env.set_uri(&admin, "https://x.example/m.json").expect("set shorter uri");
+    assert_eq!(env.metadata().uri, "https://x.example/m.json");
+
+    env.mint(pref(9), 500).expect("minting still works after uri change");
+    assert_eq!(env.balance(&env.citizen.pubkey()), 500);
+}
+
+#[test]
+fn non_admin_cannot_set_metadata_uri() {
+    let mut env = Env::new();
+    for signer in [env.minter.insecure_clone(), env.other.insecure_clone()] {
+        assert_custom(env.set_uri(&signer, "https://evil.example/m.json"), err_code(MumbucaError::Unauthorized));
+    }
+    assert_eq!(env.metadata().uri, URI);
+}
+
+#[test]
+fn metadata_uri_longer_than_200_bytes_fails() {
+    let mut env = Env::new();
+    let admin = env.admin.insecure_clone();
+    let too_long = format!("https://x.example/{}", "a".repeat(200));
+    assert_custom(env.set_uri(&admin, &too_long), err_code(MumbucaError::UriTooLong));
+    assert_eq!(env.metadata().uri, URI);
 }

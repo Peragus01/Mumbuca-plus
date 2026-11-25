@@ -48,6 +48,11 @@ pub mod mumbuca_plus {
         handle_set_max_mint_per_tx(ctx, v)
     }
 
+    /// Admin only: updates the Mum+ TokenMetadata `uri` (wallets read the logo from it).
+    pub fn set_metadata_uri(ctx: Context<SetMetadataUri>, uri: String) -> Result<()> {
+        handle_set_metadata_uri(ctx, uri)
+    }
+
     /// Blocks `mint_for_payment` only; token transfers are untouched.
     pub fn pause(ctx: Context<PauserUpdate>) -> Result<()> {
         handle_pause(ctx)

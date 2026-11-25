@@ -1,0 +1,10 @@
+{
+  "name": "Mumbuca+",
+  "logo": "https://mumbuca-plus-production.up.railway.app/token/mum-logo.png",
+  "description": "Programa do Mumbuca+: emite o token Mum+ (Token-2022) só contra pagamento liquidado, uma vez por pagamento, com teto, limite por emissão e pausa. Prova de conceito na Solana devnet.",
+  "project_url": "https://github.com/Peragus01/Mumbuca-plus",
+  "contacts": ["link:https://github.com/Peragus01/Mumbuca-plus/issues"],
+  "policy": "https://github.com/Peragus01/Mumbuca-plus#readme",
+  "preferred_languages": ["pt", "en"],
+  "source_code": "https://github.com/Peragus01/Mumbuca-plus/tree/main/anchor"
+}

@@ -4,6 +4,7 @@ import { Keypair, PublicKey } from '@solana/web3.js';
 import {
   buildInitializeInstruction,
   buildPauserInstruction,
+  buildSetMetadataUriInstruction,
   programConfigIssues,
   configMatches,
   decodeConfigAccount,
@@ -116,5 +117,25 @@ describe('program-client', () => {
         { minter, maxRechargeCents: 2_000_000n },
       ),
     ).toEqual(['minter_mismatch', 'max_mint_per_tx_below_max_recharge', 'program_paused']);
+  });
+
+  it("builds set_metadata_uri: admin signer+writable, config, writable mint, token-2022, system; borsh uri", () => {
+    const admin = Keypair.generate().publicKey;
+    const uri = "https://mumbuca-plus-production.up.railway.app/token/mum.json";
+    const ix = buildSetMetadataUriInstruction(programId, admin, uri);
+    const idl = JSON.parse(readFileSync(new URL("../../src/chain/idl/mumbuca_plus.json", import.meta.url), "utf8"));
+    const disc = Buffer.from(idl.instructions.find((i: { name: string }) => i.name === "set_metadata_uri").discriminator);
+    expect(ix.programId.equals(programId)).toBe(true);
+    expect(ix.keys.map((k) => [k.pubkey.toBase58(), k.isSigner, k.isWritable])).toEqual([
+      [admin.toBase58(), true, true],
+      [findConfigPda(programId)[0].toBase58(), false, false],
+      [findMintPda(programId)[0].toBase58(), false, true],
+      [TOKEN_2022_PROGRAM_ID.toBase58(), false, false],
+      ["11111111111111111111111111111111", false, false],
+    ]);
+    const len = Buffer.alloc(4);
+    len.writeUInt32LE(Buffer.byteLength(uri));
+    expect(Buffer.from(ix.data).equals(Buffer.concat([disc, len, Buffer.from(uri)]))).toBe(true);
+    expect(() => buildSetMetadataUriInstruction(programId, admin, "x".repeat(201))).toThrow(/200/);
   });
 });

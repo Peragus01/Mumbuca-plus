@@ -115,10 +115,21 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
   app.register(webhookRoutes, { payments, processor, providers });
 
-  if (staticDir) app.register(fastifyStatic, { root: path.resolve(staticDir) });
+  if (staticDir) {
+    app.register(fastifyStatic, {
+      root: path.resolve(staticDir),
+      // Public token metadata (logo + JSON referenced on-chain) is fetched by wallets and
+      // explorers from other origins.
+      setHeaders: (res, filePath) => {
+        const rel = path.relative(path.resolve(staticDir), filePath).split(path.sep);
+        if (rel[0] === 'token') res.setHeader('Access-Control-Allow-Origin', '*');
+      },
+    });
+  }
 
   app.setNotFoundHandler((req, reply) => {
-    const isApi = req.url.startsWith('/api') || req.url.startsWith('/webhooks');
+    const isApi =
+      req.url.startsWith('/api') || req.url.startsWith('/webhooks') || req.url.startsWith('/token/');
     if (staticDir && req.method === 'GET' && !isApi) return reply.sendFile('index.html');
     return reply.code(404).send({ error: 'not_found' });
   });

@@ -9,6 +9,8 @@ pub const RECEIPT_SEED: &[u8] = b"receipt";
 pub const TOKEN_NAME: &str = "Mumbuca+";
 pub const TOKEN_SYMBOL: &str = "Mum+";
 pub const TOKEN_DECIMALS: u8 = 2;
+/// Upper bound for the TokenMetadata `uri` set by `set_metadata_uri`.
+pub const MAX_URI_LEN: usize = 200;
 
 /// Global configuration, PDA `["config"]`. Also the mint authority of the Mum+ mint.
 #[account]

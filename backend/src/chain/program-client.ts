@@ -155,3 +155,36 @@ export function buildPauserInstruction(
     data: ixDiscriminator(name),
   });
 }
+
+/** Same bound as the program's MAX_URI_LEN. */
+export const MAX_METADATA_URI_BYTES = 200;
+
+/**
+ * `set_metadata_uri` (admin only): points the Mum+ TokenMetadata `uri` at a JSON with the logo.
+ * Accounts: admin (signer, pays extra rent), config, mint (writable), Token-2022, System.
+ */
+export function buildSetMetadataUriInstruction(
+  programId: PublicKey,
+  admin: PublicKey,
+  uri: string,
+): TransactionInstruction {
+  const bytes = Buffer.from(uri, 'utf8');
+  if (bytes.length > MAX_METADATA_URI_BYTES) {
+    throw new Error(`uri must be at most ${MAX_METADATA_URI_BYTES} bytes`);
+  }
+  const len = Buffer.alloc(4);
+  len.writeUInt32LE(bytes.length);
+  const [config] = findConfigPda(programId);
+  const [mint] = findMintPda(programId);
+  return new TransactionInstruction({
+    programId,
+    keys: [
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: config, isSigner: false, isWritable: false },
+      { pubkey: mint, isSigner: false, isWritable: true },
+      { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.concat([ixDiscriminator('set_metadata_uri'), len, bytes]),
+  });
+}

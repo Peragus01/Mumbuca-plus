@@ -1,0 +1,16 @@
+{
+  "name": "Mumbuca+",
+  "symbol": "Mum+",
+  "description": "Mumbuca+ (Mum+): moeda social de Maricá tokenizada na Solana. 1 Mum+ = R$ 1,00. Prova de conceito na devnet.",
+  "image": "https://mumbuca-plus-production.up.railway.app/token/mum-logo.png",
+  "external_url": "https://github.com/Peragus01/Mumbuca-plus",
+  "properties": {
+    "files": [
+      {
+        "uri": "https://mumbuca-plus-production.up.railway.app/token/mum-logo.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

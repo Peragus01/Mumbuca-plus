@@ -14,4 +14,6 @@ pub enum MumbucaError {
     CapExceeded,
     #[msg("Arithmetic overflow")]
     MathOverflow,
+    #[msg("Metadata URI exceeds 200 bytes")]
+    UriTooLong,
 }
