@@ -16,6 +16,8 @@ import { phantomAuthRoutes } from './routes/phantom-auth.js';
 import { meRoutes } from './routes/me.js';
 import { opsRoutes } from './routes/ops.js';
 import { paymentRoutes } from './routes/payments.js';
+import { publicRoutes } from './routes/public.js';
+import { createVisitorPolicy } from '../processing/visitor-policy.js';
 import { userRoutes } from './routes/users.js';
 import { webhookRoutes } from './routes/webhooks.js';
 
@@ -89,6 +91,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(cookie, { secret: env.SESSION_SECRET });
   app.register(rateLimit, { global: false });
 
+  const policy = createVisitorPolicy({ env, payments, token });
   const secureCookie = deps.secureCookie ?? process.env.NODE_ENV !== 'development';
 
   app.register(
@@ -103,7 +106,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       await api.register(phantomAuthRoutes, { env, users, auth, secureCookie });
       await api.register(meRoutes, { users });
       await api.register(userRoutes, { users, token });
-      await api.register(paymentRoutes, { env, payments, processor, providers });
+      await api.register(paymentRoutes, { env, payments, processor, providers, policy });
+      await api.register(publicRoutes, { policy });
       await api.register(opsRoutes, { env, token });
     },
     { prefix: '/api' },

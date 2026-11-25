@@ -182,6 +182,37 @@ export class PaymentRepository {
   }
 
   /**
+   * Visitor purchase total since `since`. Excludes FAILED and AWAITING_PAYMENT older than
+   * `staleBefore` (abandoned charges), and anything not created by a visitor.
+   */
+  async visitorTotals(since: Date, staleBefore: Date): Promise<{ cents: bigint }> {
+    const { rows } = await this.db.query<{ cents: string | number | bigint }>(
+      `select coalesce(sum(requested_amount_cents), 0) as cents from payments
+       where created_via = 'visitor' and created_at >= $1 and status <> 'FAILED'
+         and not (status = 'AWAITING_PAYMENT' and created_at < $2)`,
+      [since, staleBefore],
+    );
+    return { cents: BigInt(rows[0]?.cents ?? 0) };
+  }
+
+  /** Same filter as visitorTotals, for one wallet; `openAwaiting` = recent AWAITING_PAYMENT. */
+  async visitorUserStats(
+    userId: string,
+    since: Date,
+    staleBefore: Date,
+  ): Promise<{ count: number; openAwaiting: number }> {
+    const { rows } = await this.db.query<{ count: string | number | bigint; open_awaiting: string | number | bigint }>(
+      `select count(*) as count,
+              count(*) filter (where status = 'AWAITING_PAYMENT' and created_at >= $3) as open_awaiting
+       from payments
+       where created_via = 'visitor' and user_id = $1 and created_at >= $2 and status <> 'FAILED'
+         and not (status = 'AWAITING_PAYMENT' and created_at < $3)`,
+      [userId, since, staleBefore],
+    );
+    return { count: Number(rows[0]?.count ?? 0), openAwaiting: Number(rows[0]?.open_awaiting ?? 0) };
+  }
+
+  /**
    * Atomic guarded transition (single statement). The row is locked with FOR UPDATE and
    * re-checked against `from`, so of N concurrent callers exactly one gets the payment back;
    * the rest get null and write no event.

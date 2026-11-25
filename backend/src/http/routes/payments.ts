@@ -8,6 +8,7 @@ import {
   type PaymentProcessor,
 } from '../../processing/payment-processor.js';
 import { ProviderUnavailableError, type ProviderRegistry } from '../../providers/payment-provider.js';
+import type { VisitorPolicy } from '../../processing/visitor-policy.js';
 import type { PaymentRepository } from '../../repositories/payment-repository.js';
 import { requireOperator } from '../auth.js';
 import { errorClass, isUuid } from '../errors.js';
@@ -17,6 +18,7 @@ export interface PaymentRoutesOptions {
   payments: PaymentRepository;
   processor: PaymentProcessor;
   providers: ProviderRegistry;
+  policy: VisitorPolicy;
 }
 
 export type PaymentOrigin = 'OZAV live' | 'OZAV sandbox' | 'SIMULADO';
@@ -60,7 +62,7 @@ export function toPaymentDto(p: Payment, cluster: Env['SOLANA_CLUSTER']) {
 export type PaymentDTO = ReturnType<typeof toPaymentDto>;
 
 export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (app, opts) => {
-  const { env, payments, processor, providers } = opts;
+  const { env, payments, processor, providers, policy } = opts;
   const dto = (p: Payment) => toPaymentDto(p, env.SOLANA_CLUSTER);
   const find = (id: string) => (isUuid(id) ? payments.findById(id) : Promise.resolve(null));
   /** Own payment for a visitor (someone else's is "not found"); any payment for the operator. */
@@ -86,6 +88,14 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
           },
         },
       },
+      // 5/min per IP for visitors; operators are exempt (req.session is set by the /api onRequest hook).
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+          allowList: (req: FastifyRequest) => req.session?.role === 'operator',
+        },
+      },
     },
     async (req, reply) => {
       const { amountCents, provider } = req.body;
@@ -93,6 +103,17 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
       if (visitor && provider !== 'simulated') return reply.code(422).send({ error: 'provider_not_enabled' });
       const userId = visitor ? visitor.userId : req.body.userId;
       if (!isUuid(userId)) return reply.code(404).send({ error: 'user_not_found' });
+      if (visitor) {
+        const r = await policy.checkCreate(userId, BigInt(amountCents));
+        if (!r.ok) {
+          if (r.error === 'amount_out_of_range') {
+            return reply
+              .code(422)
+              .send({ error: r.error, minCents: r.minCents?.toString(), maxCents: r.maxCents?.toString() });
+          }
+          return reply.code(r.error === 'daily_limit' ? 429 : 409).send({ error: r.error });
+        }
+      }
       try {
         const p = await processor.createRecharge({
           userId,
@@ -143,6 +164,9 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
   app.post<{ Params: { id: string } }>('/payments/:id/simulate', async (req, reply) => {
     const p = await findScoped(req, req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
+    if (req.session?.role === 'visitor' && !(await policy.checkPay()).ok) {
+      return reply.code(409).send({ error: 'purchases_closed' });
+    }
     const provider = providers[p.provider];
     if (!provider?.simulatePayment || provider.env === 'live') {
       return reply.code(409).send({ error: 'simulation_not_supported' });
