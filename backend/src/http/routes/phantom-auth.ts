@@ -18,15 +18,16 @@ export const SIGNUP_TTL_SECONDS = 600;
 const SKEW_MS = 60_000;
 const SIGNUP_VALUE_RE = /^([1-9A-HJ-NP-Za-km-z]{32,44}):(\d{1,15})$/;
 const CONTROL_CHARS_RE = /\p{C}/u;
+const MIN_NAME_LENGTH = 2;
 const MAX_NAME_LENGTH = 40;
 const MAX_HANDLE_ATTEMPTS = 50;
 
-/** Trimmed display name, or null when empty, longer than 40 characters or containing control characters. */
+/** Trimmed display name, or null when shorter than 2, longer than 40 characters or containing control characters. */
 function cleanDisplayName(input: unknown): string | null {
   if (typeof input !== 'string') return null;
   const name = input.trim();
   const len = [...name].length;
-  if (len === 0 || len > MAX_NAME_LENGTH || CONTROL_CHARS_RE.test(name)) return null;
+  if (len < MIN_NAME_LENGTH || len > MAX_NAME_LENGTH || CONTROL_CHARS_RE.test(name)) return null;
   return name;
 }
 
@@ -99,7 +100,7 @@ export const phantomAuthRoutes: FastifyPluginAsync<PhantomAuthOptions> = async (
   app.post<{ Body: { walletAddress: string; nonce: string; signature: string } }>(
     '/auth/phantom/verify',
     {
-      config: rateLimit(20),
+      config: rateLimit(10),
       schema: {
         body: {
           type: 'object',

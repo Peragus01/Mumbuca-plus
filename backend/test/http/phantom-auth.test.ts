@@ -111,7 +111,7 @@ describe('phantom sign-in and signup', () => {
     expect(forged.statusCode).toBe(401);
   });
 
-  it.each([['   '], ['x'.repeat(41)], ['\u0007x']])('invalid displayName %j is 400', async (name) => {
+  it.each([['   '], ['A'], [' A '], ['x'.repeat(41)], ['\u0007x']])('invalid displayName %j is 400', async (name) => {
     const t = await setupApp();
     const res = await signup(t, signupCookie(t, Keypair.generate()), name);
     expect(res.statusCode).toBe(400);
