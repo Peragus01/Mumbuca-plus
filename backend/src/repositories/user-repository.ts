@@ -65,6 +65,11 @@ export class UserRepository {
     return rows[0] ? mapUser(rows[0]) : null;
   }
 
+  async findByWallet(wallet: string): Promise<User | null> {
+    const { rows } = await this.db.query<UserRow>('select * from users where wallet_address = $1', [wallet]);
+    return rows[0] ? mapUser(rows[0]) : null;
+  }
+
   async list(): Promise<User[]> {
     const { rows } = await this.db.query<UserRow>('select * from users order by created_at desc, id', []);
     return rows.map(mapUser);

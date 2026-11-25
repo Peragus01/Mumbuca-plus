@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { Env } from '../../config/env.js';
 import type { Payment, ProviderName } from '../../domain/payment.js';
 import {
@@ -8,14 +8,18 @@ import {
   type PaymentProcessor,
 } from '../../processing/payment-processor.js';
 import { ProviderUnavailableError, type ProviderRegistry } from '../../providers/payment-provider.js';
+import type { VisitorPolicy } from '../../processing/visitor-policy.js';
 import type { PaymentRepository } from '../../repositories/payment-repository.js';
+import { requireOperator } from '../auth.js';
 import { errorClass, isUuid } from '../errors.js';
+import { visitorRateLimit } from '../rate-limit.js';
 
 export interface PaymentRoutesOptions {
   env: Env;
   payments: PaymentRepository;
   processor: PaymentProcessor;
   providers: ProviderRegistry;
+  policy: VisitorPolicy;
 }
 
 export type PaymentOrigin = 'OZAV live' | 'OZAV sandbox' | 'SIMULADO';
@@ -58,10 +62,36 @@ export function toPaymentDto(p: Payment, cluster: Env['SOLANA_CLUSTER']) {
 
 export type PaymentDTO = ReturnType<typeof toPaymentDto>;
 
+/** Minimal promise-chain mutex: `run` executes jobs one at a time, in call order. */
+function createMutex() {
+  let tail: Promise<unknown> = Promise.resolve();
+  return function run<T>(job: () => Promise<T>): Promise<T> {
+    const result = tail.then(job);
+    tail = result.catch(() => undefined);
+    return result;
+  };
+}
+
+
 export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (app, opts) => {
-  const { env, payments, processor, providers } = opts;
+  const { env, payments, processor, providers, policy } = opts;
+  /**
+   * Serializes the visitor check-then-insert (policy.checkCreate + createRecharge) so concurrent
+   * requests cannot all pass the "1 open", "3/day" and global-cap checks before any insert.
+   * In-process only: this assumes a SINGLE backend replica (the Railway deploy). Scaling out would
+   * need a database-level lock (e.g. pg_advisory_xact_lock) instead.
+   */
+  const visitorCreateLock = createMutex();
   const dto = (p: Payment) => toPaymentDto(p, env.SOLANA_CLUSTER);
   const find = (id: string) => (isUuid(id) ? payments.findById(id) : Promise.resolve(null));
+  /** Own payment for a visitor (someone else's is "not found"); any payment for the operator. */
+  const findScoped = async (req: FastifyRequest, id: string) => {
+    const p = await find(id);
+    if (!p) return null;
+    const s = req.session;
+    if (s?.role === 'visitor' && p.userId.toLowerCase() !== s.userId.toLowerCase()) return null;
+    return p;
+  };
 
   app.post<{ Body: { userId: string; amountCents: string; provider: ProviderName } }>(
     '/payments',
@@ -77,13 +107,35 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
           },
         },
       },
+      // 5/min per visitor; operators are exempt.
+      config: visitorRateLimit(5),
     },
     async (req, reply) => {
-      const { userId, amountCents, provider } = req.body;
+      const { amountCents, provider } = req.body;
+      const visitor = req.session?.role === 'visitor' ? req.session : null;
+      if (visitor && provider !== 'simulated') return reply.code(422).send({ error: 'provider_not_enabled' });
+      const userId = visitor ? visitor.userId : req.body.userId;
       if (!isUuid(userId)) return reply.code(404).send({ error: 'user_not_found' });
+      const create = () =>
+        processor.createRecharge({
+          userId,
+          amountCents: BigInt(amountCents),
+          provider,
+          ...(visitor ? { createdVia: 'visitor' as const } : {}),
+        });
       try {
-        const p = await processor.createRecharge({ userId, amountCents: BigInt(amountCents), provider });
-        return reply.code(201).send(dto(p));
+        if (!visitor) return reply.code(201).send(dto(await create()));
+        const outcome = await visitorCreateLock(async () => {
+          const r = await policy.checkCreate(userId, BigInt(amountCents));
+          return r.ok ? { ok: true as const, payment: await create() } : r;
+        });
+        if (outcome.ok) return reply.code(201).send(dto(outcome.payment));
+        if (outcome.error === 'amount_out_of_range') {
+          return reply
+            .code(422)
+            .send({ error: outcome.error, minCents: outcome.minCents?.toString(), maxCents: outcome.maxCents?.toString() });
+        }
+        return reply.code(outcome.error === 'daily_limit' ? 429 : 409).send({ error: outcome.error });
       } catch (e) {
         if (e instanceof RechargeLimitError) {
           return reply
@@ -105,6 +157,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
     '/payments',
     { schema: { querystring: { type: 'object', properties: { userId: { type: 'string', maxLength: 64 } } } } },
     async (req) => {
+      if (req.session?.role === 'visitor') return (await payments.listByUser(req.session.userId)).map(dto);
       const { userId } = req.query;
       if (userId === undefined) return (await payments.listAll()).map(dto);
       if (!isUuid(userId)) return [];
@@ -113,7 +166,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
   );
 
   app.get<{ Params: { id: string } }>('/payments/:id', async (req, reply) => {
-    const p = await find(req.params.id);
+    const p = await findScoped(req, req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
     return dto(p);
   });
@@ -122,9 +175,17 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
    * Marks the charge as paid at the provider (awaited), then kicks off processing in the
    * background (signal can take up to MINT_CONFIRM_TIMEOUT_MS) and returns the current DTO.
    */
-  app.post<{ Params: { id: string } }>('/payments/:id/simulate', async (req, reply) => {
-    const p = await find(req.params.id);
+  app.post<{ Params: { id: string } }>('/payments/:id/simulate', { config: visitorRateLimit(5) }, async (req, reply) => {
+    const p = await findScoped(req, req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
+    if (req.session?.role === 'visitor') {
+      // Visitors only pay the simulated charges they created themselves.
+      if (p.createdVia !== 'visitor' || p.provider !== 'simulated') {
+        return reply.code(404).send({ error: 'payment_not_found' });
+      }
+      const r = await policy.checkPay(p);
+      if (!r.ok) return reply.code(409).send({ error: r.error });
+    }
     const provider = providers[p.provider];
     if (!provider?.simulatePayment || provider.env === 'live') {
       return reply.code(409).send({ error: 'simulation_not_supported' });
@@ -144,6 +205,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
 
   /** Operator retry: processing runs in the background; responds with the current DTO. */
   app.post<{ Params: { id: string } }>('/payments/:id/reprocess', async (req, reply) => {
+    if (requireOperator(req, reply)) return reply;
     const p = await find(req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
     app.runInBackground('reprocess', p.id, () => processor.reprocess(p.id));

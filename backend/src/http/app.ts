@@ -8,11 +8,16 @@ import type { Env } from '../config/env.js';
 import type { PaymentProcessor } from '../processing/payment-processor.js';
 import type { ProviderRegistry } from '../providers/payment-provider.js';
 import type { PaymentRepository } from '../repositories/payment-repository.js';
+import type { AuthRepository } from '../repositories/auth-repository.js';
 import type { UserRepository } from '../repositories/user-repository.js';
-import { PUBLIC_API_ROUTES, authRoutes, hasSession } from './auth.js';
+import { PUBLIC_API_ROUTES, authRoutes, readSession } from './auth.js';
 import { errorClass } from './errors.js';
+import { phantomAuthRoutes } from './routes/phantom-auth.js';
+import { meRoutes } from './routes/me.js';
 import { opsRoutes } from './routes/ops.js';
 import { paymentRoutes } from './routes/payments.js';
+import { publicRoutes } from './routes/public.js';
+import { createVisitorPolicy } from '../processing/visitor-policy.js';
 import { userRoutes } from './routes/users.js';
 import { webhookRoutes } from './routes/webhooks.js';
 
@@ -32,6 +37,7 @@ export interface AppDeps {
   env: Env;
   payments: PaymentRepository;
   users: UserRepository;
+  auth: AuthRepository;
   processor: PaymentProcessor;
   providers: ProviderRegistry;
   token: TokenGateway;
@@ -45,7 +51,7 @@ export interface AppDeps {
 }
 
 export function buildApp(deps: AppDeps): FastifyInstance {
-  const { env, payments, users, processor, providers, token, staticDir } = deps;
+  const { env, payments, users, auth, processor, providers, token, staticDir } = deps;
   const app = Fastify({
     logger: deps.logger ?? false,
     trustProxy: deps.trustProxy ?? false,
@@ -85,17 +91,23 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(cookie, { secret: env.SESSION_SECRET });
   app.register(rateLimit, { global: false });
 
+  const policy = createVisitorPolicy({ env, payments, token });
   const secureCookie = deps.secureCookie ?? process.env.NODE_ENV !== 'development';
 
   app.register(
     async (api) => {
+      api.decorateRequest('session', null);
       api.addHook('onRequest', async (req, reply) => {
+        req.session = readSession(req);
         if (req.routeOptions.url && PUBLIC_API_ROUTES.has(req.routeOptions.url)) return;
-        if (!hasSession(req)) return reply.code(401).send({ error: 'unauthorized' });
+        if (!req.session) return reply.code(401).send({ error: 'unauthorized' });
       });
       await api.register(authRoutes, { password: env.DEMO_PASSWORD, secureCookie });
+      await api.register(phantomAuthRoutes, { env, users, auth, secureCookie });
+      await api.register(meRoutes, { users });
       await api.register(userRoutes, { users, token });
-      await api.register(paymentRoutes, { env, payments, processor, providers });
+      await api.register(paymentRoutes, { env, payments, processor, providers, policy });
+      await api.register(publicRoutes, { policy });
       await api.register(opsRoutes, { env, token });
     },
     { prefix: '/api' },

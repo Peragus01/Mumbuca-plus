@@ -85,4 +85,22 @@ describe('loadEnv', () => {
   it('rejects other target currency', () => {
     expect(() => loadEnv({ ...validEnv, OZAV_TARGET_CURRENCY: 'USDC' })).toThrow(/OZAV_TARGET_CURRENCY/);
   });
+  it('has visitor defaults', () => {
+    const env = loadEnv(validEnv);
+    expect(env.VISITOR_MIN_CENTS).toBe(1100n);
+    expect(env.VISITOR_MAX_CENTS).toBe(10000n);
+    expect(env.VISITOR_MAX_PURCHASES_PER_DAY).toBe(3);
+    expect(env.VISITOR_DAILY_CAP_CENTS).toBe(200000n);
+    expect(env.VISITOR_SIGNUPS_PER_IP_PER_DAY).toBe(5);
+    expect(env.VISITOR_SIGNIN_ENABLED).toBe(true);
+  });
+  it('rejects VISITOR_MIN_CENTS below 1100', () => {
+    expect(() => loadEnv({ ...validEnv, VISITOR_MIN_CENTS: '1000' })).toThrow(/VISITOR_MIN_CENTS/);
+  });
+  it('parses VISITOR_SIGNIN_ENABLED=false', () => {
+    expect(loadEnv({ ...validEnv, VISITOR_SIGNIN_ENABLED: 'false' }).VISITOR_SIGNIN_ENABLED).toBe(false);
+  });
+  it('rejects VISITOR_MIN_CENTS > VISITOR_MAX_CENTS', () => {
+    expect(() => loadEnv({ ...validEnv, VISITOR_MIN_CENTS: '2000', VISITOR_MAX_CENTS: '1500' })).toThrow(/VISITOR_MIN_CENTS/);
+  });
 });

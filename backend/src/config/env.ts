@@ -83,6 +83,12 @@ const base = z.object({
     RPC_TIMEOUT_MS: intStr(12000),
     MAX_MINT_ATTEMPTS: intStr(5),
     LOW_SOL_THRESHOLD_LAMPORTS: bigintStr('100000000'),
+    VISITOR_MIN_CENTS: bigintStr('1100'),
+    VISITOR_MAX_CENTS: bigintStr('10000'),
+    VISITOR_MAX_PURCHASES_PER_DAY: intStr(3),
+    VISITOR_DAILY_CAP_CENTS: bigintStr('200000'),
+    VISITOR_SIGNUPS_PER_IP_PER_DAY: intStr(5),
+    VISITOR_SIGNIN_ENABLED: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   });
 
 export const ENV_KEYS: readonly string[] = Object.keys(base.shape);
@@ -99,6 +105,12 @@ const schema = base
     }
     if (env.MIN_RECHARGE_CENTS > env.MAX_RECHARGE_CENTS) {
       ctx.addIssue({ code: 'custom', path: ['MIN_RECHARGE_CENTS'], message: 'must be <= MAX_RECHARGE_CENTS' });
+    }
+    if (env.VISITOR_MIN_CENTS < 1100n) {
+      ctx.addIssue({ code: 'custom', path: ['VISITOR_MIN_CENTS'], message: 'must be >= 1100 (provider minimum)' });
+    }
+    if (env.VISITOR_MIN_CENTS > env.VISITOR_MAX_CENTS) {
+      ctx.addIssue({ code: 'custom', path: ['VISITOR_MIN_CENTS'], message: 'must be <= VISITOR_MAX_CENTS' });
     }
   })
   .transform(({ MINTER_SECRET_KEY, ...rest }) => ({ ...rest, minterSecretKey: MINTER_SECRET_KEY }));

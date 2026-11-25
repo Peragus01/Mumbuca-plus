@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../db/db.js';
-import type { Payment, PaymentStatus, ProviderEnv, ProviderName } from '../domain/payment.js';
+import type { CreatedVia, Payment, PaymentStatus, ProviderEnv, ProviderName } from '../domain/payment.js';
 
 export type PaymentPatch = Partial<
   Pick<
@@ -42,6 +42,7 @@ interface PaymentRow {
   last_error: string | null;
   attempts: string | number | bigint;
   mint_rejections: string | number | bigint;
+  created_via: CreatedVia;
   created_at: Date;
   updated_at: Date;
 }
@@ -71,6 +72,7 @@ function mapPayment(r: PaymentRow): Payment {
     lastError: r.last_error,
     attempts: Number(r.attempts),
     mintRejections: Number(r.mint_rejections),
+    createdVia: r.created_via,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -115,11 +117,19 @@ export class PaymentRepository {
     provider: ProviderName;
     providerEnv: ProviderEnv;
     requestedAmountCents: bigint;
+    createdVia?: CreatedVia;
   }): Promise<Payment> {
     const { rows } = await this.db.query<PaymentRow>(
-      `insert into payments (id, user_id, provider, provider_env, requested_amount_cents, status)
-       values ($1, $2, $3, $4, $5, 'AWAITING_PAYMENT') returning *`,
-      [randomUUID(), input.userId, input.provider, input.providerEnv, input.requestedAmountCents.toString()],
+      `insert into payments (id, user_id, provider, provider_env, requested_amount_cents, status, created_via)
+       values ($1, $2, $3, $4, $5, 'AWAITING_PAYMENT', $6) returning *`,
+      [
+        randomUUID(),
+        input.userId,
+        input.provider,
+        input.providerEnv,
+        input.requestedAmountCents.toString(),
+        input.createdVia ?? 'operator',
+      ],
     );
     return mapPayment(rows[0]!);
   }
@@ -169,6 +179,37 @@ export class PaymentRepository {
       [],
     );
     return rows.map(mapPayment);
+  }
+
+  /**
+   * Visitor purchase total since `since`. Excludes FAILED and AWAITING_PAYMENT older than
+   * `staleBefore` (abandoned charges), and anything not created by a visitor.
+   */
+  async visitorTotals(since: Date, staleBefore: Date): Promise<{ cents: bigint }> {
+    const { rows } = await this.db.query<{ cents: string | number | bigint }>(
+      `select coalesce(sum(requested_amount_cents), 0) as cents from payments
+       where created_via = 'visitor' and created_at >= $1 and status <> 'FAILED'
+         and not (status = 'AWAITING_PAYMENT' and created_at < $2)`,
+      [since, staleBefore],
+    );
+    return { cents: BigInt(rows[0]?.cents ?? 0) };
+  }
+
+  /** Same filter as visitorTotals, for one wallet; `openAwaiting` = recent AWAITING_PAYMENT. */
+  async visitorUserStats(
+    userId: string,
+    since: Date,
+    staleBefore: Date,
+  ): Promise<{ count: number; openAwaiting: number }> {
+    const { rows } = await this.db.query<{ count: string | number | bigint; open_awaiting: string | number | bigint }>(
+      `select count(*) as count,
+              count(*) filter (where status = 'AWAITING_PAYMENT' and created_at >= $3) as open_awaiting
+       from payments
+       where created_via = 'visitor' and user_id = $1 and created_at >= $2 and status <> 'FAILED'
+         and not (status = 'AWAITING_PAYMENT' and created_at < $3)`,
+      [userId, since, staleBefore],
+    );
+    return { count: Number(rows[0]?.count ?? 0), openAwaiting: Number(rows[0]?.open_awaiting ?? 0) };
   }
 
   /**

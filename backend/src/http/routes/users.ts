@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { TokenGateway } from '../../chain/token-gateway.js';
 import { DuplicateUser, InvalidWalletAddress, type User, type UserRepository } from '../../repositories/user-repository.js';
+import { requireOperator } from '../auth.js';
 import { errorClass, isUuid } from '../errors.js';
+import { visitorRateLimit } from '../rate-limit.js';
 
 export interface UserRoutesOptions {
   users: UserRepository;
@@ -17,7 +19,10 @@ export const toUserDto = (u: User) => ({
 });
 
 export const userRoutes: FastifyPluginAsync<UserRoutesOptions> = async (app, { users, token }) => {
-  app.get('/users', async () => (await users.list()).map(toUserDto));
+  app.get('/users', async (req, reply) => {
+    if (requireOperator(req, reply)) return reply;
+    return (await users.list()).map(toUserDto);
+  });
 
   app.post<{ Body: { handle: string; displayName: string; walletAddress: string } }>(
     '/users',
@@ -35,6 +40,7 @@ export const userRoutes: FastifyPluginAsync<UserRoutesOptions> = async (app, { u
       },
     },
     async (req, reply) => {
+      if (requireOperator(req, reply)) return reply;
       try {
         const u = await users.create(req.body);
         return reply.code(201).send(toUserDto(u));
@@ -46,8 +52,10 @@ export const userRoutes: FastifyPluginAsync<UserRoutesOptions> = async (app, { u
     },
   );
 
-  app.get<{ Params: { id: string } }>('/users/:id/balance', async (req, reply) => {
-    const user = isUuid(req.params.id) ? await users.findById(req.params.id) : null;
+  // One RPC per call: 30/min per visitor; operators are exempt.
+  app.get<{ Params: { id: string } }>('/users/:id/balance', { config: visitorRateLimit(30) }, async (req, reply) => {
+    const own = req.session?.role === 'visitor' && req.session.userId.toLowerCase() !== req.params.id.toLowerCase();
+    const user = !own && isUuid(req.params.id) ? await users.findById(req.params.id) : null;
     if (!user) return reply.code(404).send({ error: 'user_not_found' });
     try {
       const units = await token.balanceOf(user.walletAddress);

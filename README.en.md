@@ -65,6 +65,22 @@ Every purchase also supports local culture. In the proof of concept, the benefit
 7. No payment is ever minted twice, even with redeliveries, network failures or server restarts.
 8. With Mum+, the visitor spends in Maricá's accredited network and enjoys the program's benefits and discounts.
 
+### Try it yourself
+
+Site: https://mumbuca-plus-production.up.railway.app
+
+1. In Phantom, switch to Devnet: Settings → Developer settings → Testnet mode → Solana Devnet.
+2. On the site, click **Entrar com Phantom** (sign in with Phantom). You sign a message. No transaction is authorized.
+3. Click **Criar conta** (create account) and pick a display name.
+4. Click **＋ Comprar Mum+** (buy Mum+), choose an amount and click **Gerar Pix**.
+5. Click **Pagar agora (demonstração)** (pay now, demo).
+6. The Mum+ shows up in Phantom (Devnet) and on Solana Explorer.
+
+No real money is used; everything runs on Solana devnet.
+
+Limits: R$ 11 to R$ 100 per purchase, 3 purchases per wallet per 24 h, 1 pending purchase at a time and R$ 2,000 in total across all visitors per 24 h. An unpaid purchase expires after 30 minutes. Purchases may pause automatically (for example, once the daily total is reached).
+
+
 ## 3. The money route: BRL → BRS → Mumbuca+
 
 ```mermaid
@@ -253,6 +269,9 @@ flowchart TB
 | Minting service | Simulates, sends `mint`, tracks confirmation, recovers from failures without duplicating |
 | Transaction database | Complete, auditable history of every payment and transition |
 | Dashboard | Visitor "My wallet" (balance, buying Mum+, benefits in Maricá, history) and operator view (all payments, signatures, actions) |
+
+**Sign-in and scoping.** Visitors sign in by message signature (SIWS-style): the server issues a challenge with a single-use nonce, valid for 5 minutes and stored server-side, and verifies the ed25519 signature. The session carries a role (operator or visitor), and the server scopes every visitor request to the visitor's own data: another person's resource returns 404 and an operator route returns 403. The look uses [Spell UI](https://spell.sh) (MIT): AnimatedGradient and PopButton.
+
 
 **Stack:**
 - Program: Rust and Anchor 1.2.

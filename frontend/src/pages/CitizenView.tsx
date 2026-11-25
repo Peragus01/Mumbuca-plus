@@ -4,23 +4,46 @@ import { BenefitsSection } from '../components/BenefitsSection';
 import { CopyButton } from '../components/CopyButton';
 import { RechargeDialog } from '../components/RechargeDialog';
 import { StatusBadge } from '../components/StatusBadge';
-import { formatBRL, formatDateTime, formatMum, isTerminal, shortAddress } from '../format';
+import { formatBRL, formatDateTime, formatMum, isResumable, isTerminal, shortAddress } from '../format';
 import { storage, useInterval } from '../hooks';
+import { PopButton } from '../components/spell/pop-button';
 
 const SELECTED_KEY = 'mumbuca.citizen.user';
 
 type Balance = { state: 'loading' } | { state: 'ok'; units: string } | { state: 'error' };
 
-export function CitizenView() {
+export function CitizenView({ visitor }: { visitor?: UserDTO } = {}) {
   const selectId = useId();
-  const [users, setUsers] = useState<UserDTO[] | null>(null);
+  const [users, setUsers] = useState<UserDTO[] | null>(visitor ? [visitor] : null);
   const [usersError, setUsersError] = useState(false);
-  const [userId, setUserId] = useState<string | null>(() => storage.get(SELECTED_KEY));
+  const [userId, setUserId] = useState<string | null>(() => (visitor ? visitor.id : storage.get(SELECTED_KEY)));
   const [balance, setBalance] = useState<Balance>({ state: 'loading' });
   const [history, setHistory] = useState<PaymentDTO[] | null>(null);
   const [recharging, setRecharging] = useState(false);
+  /** Visitor only: an open purchase being resumed from the history ("Pagar agora"). */
+  const [resuming, setResuming] = useState<PaymentDTO | null>(null);
+  const [purchasesOpen, setPurchasesOpen] = useState(true);
+
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const refreshPurchasesOpen = useCallback(() => {
+    api.publicStatus().then(
+      (s) => mountedRef.current && setPurchasesOpen(s.visitorPurchasesOpen),
+      () => {},
+    );
+  }, []);
 
   useEffect(() => {
+    if (visitor) refreshPurchasesOpen();
+  }, [visitor, refreshPurchasesOpen]);
+
+  useEffect(() => {
+    if (visitor) return;
     api
       .users()
       .then((list) => {
@@ -48,15 +71,15 @@ export function CitizenView() {
   useEffect(() => {
     currentUserId.current = userId;
     if (!userId) return;
-    storage.set(SELECTED_KEY, userId);
+    if (!visitor) storage.set(SELECTED_KEY, userId);
     setBalance({ state: 'loading' });
     setHistory(null);
     void refresh(userId);
-  }, [userId, refresh]);
+  }, [userId, refresh, visitor]);
 
   // Keep pending recharges moving in the history while the dialog is closed.
   const hasOpen = history?.some((p) => !isTerminal(p.status)) ?? false;
-  useInterval(() => userId && void refresh(userId), 5000, hasOpen && !recharging);
+  useInterval(() => userId && void refresh(userId), 5000, hasOpen && !recharging && !resuming);
 
   if (usersError) {
     return <p className="alert alert--danger" role="alert">Não foi possível carregar as contas. Recarregue a página.</p>;
@@ -73,16 +96,18 @@ export function CitizenView() {
 
   return (
     <div className="stack stack--lg">
-      <div className="account-picker">
-        <label htmlFor={selectId}>Conta</label>
-        <select id={selectId} value={userId ?? ''} onChange={(e) => setUserId(e.target.value)}>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.displayName} (@{u.handle})
-            </option>
-          ))}
-        </select>
-      </div>
+      {!visitor && (
+        <div className="account-picker">
+          <label htmlFor={selectId}>Conta</label>
+          <select id={selectId} value={userId ?? ''} onChange={(e) => setUserId(e.target.value)}>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.displayName} (@{u.handle})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {user && (
         <section className="balance-card" aria-labelledby="balance-title">
@@ -109,9 +134,15 @@ export function CitizenView() {
             </span>
           </div>
           <div className="balance-card__actions">
-            <button type="button" className="btn-primary button--lg" onClick={() => setRecharging(true)}>
-              <span aria-hidden="true">＋</span> Comprar Mum+
-            </button>
+            {visitor ? (
+              <PopButton type="button" color="marica" size="lg" disabled={!purchasesOpen} onClick={() => setRecharging(true)}>
+                <span aria-hidden="true">＋</span> Comprar Mum+
+              </PopButton>
+            ) : (
+              <button type="button" className="btn-primary button--lg" onClick={() => setRecharging(true)}>
+                <span aria-hidden="true">＋</span> Comprar Mum+
+              </button>
+            )}
             <a
               className="btn-secondary button--lg"
               href={`https://explorer.solana.com/address/${encodeURIComponent(user.walletAddress)}?cluster=devnet`}
@@ -122,6 +153,16 @@ export function CitizenView() {
               <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </div>
+          {visitor && !purchasesOpen && (
+            <p className="balance-card__note" role="status">
+              Compras de demonstração pausadas no momento. Tente mais tarde.
+            </p>
+          )}
+          {visitor && (
+            <p className="balance-card__note">
+              Seus Mum+ aparecem na Phantom quando ela está na rede de testes (Devnet).
+            </p>
+          )}
           <ul className="impact-chips" aria-label="Por que usar Mum+">
             <li className="chip chip--impact">
               <span aria-hidden="true">🎟️</span> Descontos e benefícios na rede de Maricá
@@ -158,6 +199,11 @@ export function CitizenView() {
                       : formatBRL(p.requestedAmountCents)}
                   </span>
                   <StatusBadge status={p.status} />
+                  {visitor && isResumable(p) && (
+                    <button type="button" className="link small" onClick={() => setResuming(p)}>
+                      Pagar agora
+                    </button>
+                  )}
                   {p.explorerUrl && (
                     <a className="link small" href={p.explorerUrl} target="_blank" rel="noopener noreferrer">
                       ver na rede ↗
@@ -170,13 +216,19 @@ export function CitizenView() {
         )}
       </section>
 
-      {recharging && user && (
+      {(recharging || resuming) && user && (
         <RechargeDialog
+          key={resuming?.id ?? 'new'}
           userId={user.id}
-          provider="ozav"
+          provider={visitor ? 'simulated' : 'ozav'}
+          audience={visitor ? 'visitor' : undefined}
+          allowSimulate={!!visitor}
+          initialPayment={resuming ?? undefined}
           onClose={() => {
             setRecharging(false);
+            setResuming(null);
             void refresh(user.id);
+            if (visitor) refreshPurchasesOpen();
           }}
           onCompleted={() => void refresh(user.id)}
         />

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PaymentDTO, UserDTO } from '../api';
 import { CitizenView } from './CitizenView';
@@ -165,6 +165,115 @@ describe('CitizenView', () => {
       stubDefault();
       render(<CitizenView />);
       expect(await screen.findByRole('button', { name: /Comprar Mum\+/ })).toBeTruthy();
+    });
+  });
+  describe('visitor mode', () => {
+    function stubVisitor(open = true) {
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url === '/api/users') return json(users);
+        if (url === '/api/public/status') return json({ visitorPurchasesOpen: open });
+        if (url.endsWith('/balance')) return json({ balanceUnits: '5000' });
+        if (url.startsWith('/api/payments')) return json([]);
+        return json({ error: 'not_found' }, 404);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    }
+
+    it('does not fetch users nor render the account selector', async () => {
+      const fetchMock = stubVisitor();
+      const { container } = render(<CitizenView visitor={users[0]} />);
+      expect(await screen.findByText(/Bem-vindo a Maricá/)).toBeTruthy();
+      expect(container.querySelector('select')).toBeNull();
+      expect(fetchMock.mock.calls.some((c) => c[0] === '/api/users')).toBe(false);
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).includes(`/api/users/${A}/balance`) || String(c[0]).includes(A))).toBe(true);
+    });
+
+    it('shows the Devnet hint', async () => {
+      stubVisitor();
+      render(<CitizenView visitor={users[0]} />);
+      expect(await screen.findByText(/Seus Mum\+ aparecem na Phantom quando ela está na rede de testes \(Devnet\)/)).toBeTruthy();
+    });
+
+    it('disables buying and explains when demo purchases are paused', async () => {
+      stubVisitor(false);
+      render(<CitizenView visitor={users[0]} />);
+      expect(await screen.findByText('Compras de demonstração pausadas no momento. Tente mais tarde.')).toBeTruthy();
+      expect((screen.getByRole('button', { name: /Comprar Mum\+/ }) as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('operator dialog keeps the purchase wording and has no demo pay button', async () => {
+      stubVisitor();
+      render(<CitizenView />);
+      fireEvent.click(await screen.findByRole('button', { name: /Comprar Mum\+/ }));
+      expect(await screen.findByText('Comprar Mum+ via Pix')).toBeTruthy();
+      expect(screen.queryByText('Recarregar Mum+')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Pagar agora (demonstração)' })).toBeNull();
+    });
+
+    it('enables buying when open', async () => {
+      stubVisitor(true);
+      render(<CitizenView visitor={users[0]} />);
+      await screen.findByText(/Bem-vindo a Maricá/);
+      await waitFor(() => expect((screen.getByRole('button', { name: /Comprar Mum\+/ }) as HTMLButtonElement).disabled).toBe(false));
+      expect(screen.queryByText(/pausadas/)).toBeNull();
+    });
+  });
+  describe('visitor resume of an open purchase', () => {
+    const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+    function stubHistory(history: PaymentDTO[]) {
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url === '/api/users') return json(users);
+        if (url === '/api/public/status') return json({ visitorPurchasesOpen: true });
+        if (url.endsWith('/balance')) return json({ balanceUnits: '5000' });
+        if (url.startsWith('/api/payments?')) return json(history);
+        if (url.startsWith('/api/payments/')) return json(history[0]);
+        return json({ error: 'not_found' }, 404);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    }
+    const awaiting = (createdAt: string) =>
+      payment(A, {
+        status: 'AWAITING_PAYMENT',
+        mintAmountUnits: null,
+        txSignature: null,
+        explorerUrl: null,
+        pixBrCode: 'BRCODE123',
+        createdAt,
+      });
+
+    it('a recent AWAITING_PAYMENT row shows Pagar agora and opens the dialog on it', async () => {
+      stubHistory([awaiting(minutesAgo(5))]);
+      render(<CitizenView visitor={users[0]} />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Pagar agora' }));
+      expect(await screen.findByText('Compra de R$ 50,00')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Pagar agora (demonstração)' })).toBeTruthy();
+    });
+
+    it('an AWAITING_PAYMENT older than 30 min has no Pagar agora', async () => {
+      stubHistory([awaiting(minutesAgo(31))]);
+      render(<CitizenView visitor={users[0]} />);
+      await screen.findByText('Compra de Mum+ via Pix');
+      expect(screen.queryByRole('button', { name: 'Pagar agora' })).toBeNull();
+    });
+
+    it('operator CitizenView shows no Pagar agora', async () => {
+      stubHistory([awaiting(minutesAgo(5))]);
+      render(<CitizenView />);
+      await screen.findByText('Compra de Mum+ via Pix');
+      expect(screen.queryByRole('button', { name: 'Pagar agora' })).toBeNull();
+    });
+
+    it('refreshes the purchases-open status when the dialog closes', async () => {
+      const fetchMock = stubHistory([]);
+      render(<CitizenView visitor={users[0]} />);
+      const buy = await screen.findByRole('button', { name: /Comprar Mum\+/ });
+      const statusCalls = () => fetchMock.mock.calls.filter((c) => c[0] === '/api/public/status').length;
+      await waitFor(() => expect(statusCalls()).toBe(1));
+      fireEvent.click(buy);
+      fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+      await waitFor(() => expect(statusCalls()).toBe(2));
     });
   });
 });
