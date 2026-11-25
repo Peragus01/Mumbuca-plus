@@ -30,7 +30,7 @@ let sharedDb: Promise<Db> | null = null;
 async function freshDb(): Promise<Db> {
   sharedDb ??= createTestDb();
   const db = await sharedDb;
-  await db.query('truncate payment_events, payments, users, simulated_charges restart identity cascade', []);
+  await db.query('truncate payment_events, payments, users, simulated_charges, auth_challenges, signup_ip_counts restart identity cascade', []);
   return db;
 }
 

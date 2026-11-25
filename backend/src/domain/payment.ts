@@ -21,6 +21,8 @@ export const OPEN_STATUSES: readonly PaymentStatus[] = [
   'MINT_PENDING',
 ];
 
+export type CreatedVia = 'operator' | 'visitor';
+
 export interface Payment {
   id: string;
   userId: string;
@@ -44,6 +46,7 @@ export interface Payment {
   attempts: number;
   /** Definitive program rejections (counted apart from transient attempts); FAILED at MAX_MINT_ATTEMPTS. */
   mintRejections: number;
+  createdVia: CreatedVia;
   createdAt: Date;
   updatedAt: Date;
 }

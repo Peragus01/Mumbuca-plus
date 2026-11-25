@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../db/db.js';
-import type { Payment, PaymentStatus, ProviderEnv, ProviderName } from '../domain/payment.js';
+import type { CreatedVia, Payment, PaymentStatus, ProviderEnv, ProviderName } from '../domain/payment.js';
 
 export type PaymentPatch = Partial<
   Pick<
@@ -42,6 +42,7 @@ interface PaymentRow {
   last_error: string | null;
   attempts: string | number | bigint;
   mint_rejections: string | number | bigint;
+  created_via: CreatedVia;
   created_at: Date;
   updated_at: Date;
 }
@@ -71,6 +72,7 @@ function mapPayment(r: PaymentRow): Payment {
     lastError: r.last_error,
     attempts: Number(r.attempts),
     mintRejections: Number(r.mint_rejections),
+    createdVia: r.created_via,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -115,11 +117,19 @@ export class PaymentRepository {
     provider: ProviderName;
     providerEnv: ProviderEnv;
     requestedAmountCents: bigint;
+    createdVia?: CreatedVia;
   }): Promise<Payment> {
     const { rows } = await this.db.query<PaymentRow>(
-      `insert into payments (id, user_id, provider, provider_env, requested_amount_cents, status)
-       values ($1, $2, $3, $4, $5, 'AWAITING_PAYMENT') returning *`,
-      [randomUUID(), input.userId, input.provider, input.providerEnv, input.requestedAmountCents.toString()],
+      `insert into payments (id, user_id, provider, provider_env, requested_amount_cents, status, created_via)
+       values ($1, $2, $3, $4, $5, 'AWAITING_PAYMENT', $6) returning *`,
+      [
+        randomUUID(),
+        input.userId,
+        input.provider,
+        input.providerEnv,
+        input.requestedAmountCents.toString(),
+        input.createdVia ?? 'operator',
+      ],
     );
     return mapPayment(rows[0]!);
   }

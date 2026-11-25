@@ -19,6 +19,15 @@ const events = async (db: Db, id: string) =>
   (await db.query('select * from payment_events where payment_id=$1 order by id', [id])).rows;
 
 describe('PaymentRepository', () => {
+  it('createdVia defaults to operator and can be visitor', async () => {
+    const { repo, user, mk } = await setup();
+    expect((await mk()).createdVia).toBe('operator');
+    const v = await repo.create({
+      userId: user.id, provider: 'simulated', providerEnv: 'local', requestedAmountCents: 2500n, createdVia: 'visitor',
+    });
+    expect(v.createdVia).toBe('visitor');
+    expect((await repo.findById(v.id))?.createdVia).toBe('visitor');
+  });
   it('create payment starts AWAITING_PAYMENT', async () => {
     const { repo, mk } = await setup();
     const p = await mk();
