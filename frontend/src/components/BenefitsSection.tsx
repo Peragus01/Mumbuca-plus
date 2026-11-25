@@ -1,7 +1,7 @@
 /** Illustrative perks of the Mumbuca+ proposal (static content, no backend, no real business names). */
 const BENEFITS = [
-  { icon: '🍽️', title: 'Gastronomia', perk: 'até 10% off' },
-  { icon: '🏨', title: 'Hospedagem', perk: 'até 15% off' },
+  { icon: '🍽️', title: 'Gastronomia', perk: 'cashback de 5%' },
+  { icon: '🏨', title: 'Hospedagem', perk: 'cashback de 5%' },
   { icon: '🎬', title: 'Cultura e cinema', perk: 'ingresso com desconto' },
   { icon: '🛍️', title: 'Comércio local', perk: 'cashback de 5%' },
 ] as const;
