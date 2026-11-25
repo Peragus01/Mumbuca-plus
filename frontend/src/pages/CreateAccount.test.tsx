@@ -38,6 +38,14 @@ describe('CreateAccount', () => {
     expect(input.value).toBe('A');
   });
 
+  it('maps rate_limited (429) to a try-later message', async () => {
+    vi.spyOn(api, 'signup').mockRejectedValue(new ApiError(429, 'rate_limited', {}));
+    render(<CreateAccount wallet={WALLET} onSignedIn={() => {}} onExpired={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Como quer ser chamado?'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(await screen.findByText('Muitas tentativas. Tente mais tarde.')).toBeTruthy();
+  });
+
   it('returns to Entry with a message on signup_expired', async () => {
     (window as unknown as { phantom?: unknown }).phantom = {
       solana: {

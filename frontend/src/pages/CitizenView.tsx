@@ -4,7 +4,7 @@ import { BenefitsSection } from '../components/BenefitsSection';
 import { CopyButton } from '../components/CopyButton';
 import { RechargeDialog } from '../components/RechargeDialog';
 import { StatusBadge } from '../components/StatusBadge';
-import { formatBRL, formatDateTime, formatMum, isTerminal, shortAddress } from '../format';
+import { formatBRL, formatDateTime, formatMum, isResumable, isTerminal, shortAddress } from '../format';
 import { storage, useInterval } from '../hooks';
 import { PopButton } from '../components/spell/pop-button';
 
@@ -20,19 +20,27 @@ export function CitizenView({ visitor }: { visitor?: UserDTO } = {}) {
   const [balance, setBalance] = useState<Balance>({ state: 'loading' });
   const [history, setHistory] = useState<PaymentDTO[] | null>(null);
   const [recharging, setRecharging] = useState(false);
+  /** Visitor only: an open purchase being resumed from the history ("Pagar agora"). */
+  const [resuming, setResuming] = useState<PaymentDTO | null>(null);
   const [purchasesOpen, setPurchasesOpen] = useState(true);
 
+  const mountedRef = useRef(true);
   useEffect(() => {
-    if (!visitor) return;
-    let cancelled = false;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const refreshPurchasesOpen = useCallback(() => {
     api.publicStatus().then(
-      (s) => !cancelled && setPurchasesOpen(s.visitorPurchasesOpen),
+      (s) => mountedRef.current && setPurchasesOpen(s.visitorPurchasesOpen),
       () => {},
     );
-    return () => {
-      cancelled = true;
-    };
-  }, [visitor]);
+  }, []);
+
+  useEffect(() => {
+    if (visitor) refreshPurchasesOpen();
+  }, [visitor, refreshPurchasesOpen]);
 
   useEffect(() => {
     if (visitor) return;
@@ -71,7 +79,7 @@ export function CitizenView({ visitor }: { visitor?: UserDTO } = {}) {
 
   // Keep pending recharges moving in the history while the dialog is closed.
   const hasOpen = history?.some((p) => !isTerminal(p.status)) ?? false;
-  useInterval(() => userId && void refresh(userId), 5000, hasOpen && !recharging);
+  useInterval(() => userId && void refresh(userId), 5000, hasOpen && !recharging && !resuming);
 
   if (usersError) {
     return <p className="alert alert--danger" role="alert">Não foi possível carregar as contas. Recarregue a página.</p>;
@@ -191,6 +199,11 @@ export function CitizenView({ visitor }: { visitor?: UserDTO } = {}) {
                       : formatBRL(p.requestedAmountCents)}
                   </span>
                   <StatusBadge status={p.status} />
+                  {visitor && isResumable(p) && (
+                    <button type="button" className="link small" onClick={() => setResuming(p)}>
+                      Pagar agora
+                    </button>
+                  )}
                   {p.explorerUrl && (
                     <a className="link small" href={p.explorerUrl} target="_blank" rel="noopener noreferrer">
                       ver na rede ↗
@@ -203,15 +216,19 @@ export function CitizenView({ visitor }: { visitor?: UserDTO } = {}) {
         )}
       </section>
 
-      {recharging && user && (
+      {(recharging || resuming) && user && (
         <RechargeDialog
+          key={resuming?.id ?? 'new'}
           userId={user.id}
           provider={visitor ? 'simulated' : 'ozav'}
           audience={visitor ? 'visitor' : undefined}
           allowSimulate={!!visitor}
+          initialPayment={resuming ?? undefined}
           onClose={() => {
             setRecharging(false);
+            setResuming(null);
             void refresh(user.id);
+            if (visitor) refreshPurchasesOpen();
           }}
           onCompleted={() => void refresh(user.id)}
         />

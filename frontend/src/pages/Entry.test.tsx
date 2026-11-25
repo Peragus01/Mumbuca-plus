@@ -83,6 +83,14 @@ describe('Entry', () => {
     expect(await screen.findByText('Não conseguimos entrar agora. Tente de novo.')).toBeTruthy();
   });
 
+  it('maps rate_limited (429) to a try-later message', async () => {
+    mockPhantom();
+    vi.spyOn(api, 'phantomChallenge').mockRejectedValue(new ApiError(429, 'rate_limited', {}));
+    render(<Entry onSignedIn={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar com Phantom' }));
+    expect(await screen.findByText('Muitas tentativas. Tente mais tarde.')).toBeTruthy();
+  });
+
   it('operator link reveals the password form and calls api.login', async () => {
     const login = vi.spyOn(api, 'login').mockResolvedValue(undefined);
     const onSignedIn = vi.fn();

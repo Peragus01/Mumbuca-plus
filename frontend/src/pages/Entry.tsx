@@ -25,6 +25,7 @@ export function EntryShell({ soft, children }: { soft?: boolean; children: React
 function phantomErrorMessage(err: unknown): string {
   if (isUserRejection(err)) return 'Você cancelou na Phantom. Tente de novo quando quiser.';
   if (err instanceof ApiError && err.code === 'signin_disabled') return 'O acesso de visitantes está pausado no momento.';
+  if (err instanceof ApiError && err.code === 'rate_limited') return 'Muitas tentativas. Tente mais tarde.';
   return 'Não conseguimos entrar agora. Tente de novo.';
 }
 

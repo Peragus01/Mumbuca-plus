@@ -1,4 +1,4 @@
-import type { PaymentStatus } from './api';
+import type { PaymentDTO, PaymentStatus } from './api';
 
 /** "1234567" -> "1.234.567" (integer part only, BigInt-exact). */
 function groupThousands(int: string): string {
@@ -51,6 +51,18 @@ export function statusLabel(status: PaymentStatus): string {
 
 export const TERMINAL_STATUSES: ReadonlySet<PaymentStatus> = new Set(['MINTED', 'FAILED']);
 export const isTerminal = (s: PaymentStatus) => TERMINAL_STATUSES.has(s);
+
+/** A visitor charge stops counting (and can no longer be paid) after 30 min, as on the backend. */
+export const OPEN_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
+
+/** True for an AWAITING_PAYMENT simulated charge created less than 30 min ago (still payable by a visitor). */
+export function isResumable(p: PaymentDTO, now = Date.now()): boolean {
+  return (
+    p.status === 'AWAITING_PAYMENT' &&
+    p.provider === 'simulated' &&
+    now - new Date(p.createdAt).getTime() < OPEN_PAYMENT_WINDOW_MS
+  );
+}
 
 /**
  * User-typed reais -> cents string, or null when invalid / not positive.

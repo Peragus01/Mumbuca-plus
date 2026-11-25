@@ -1,7 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError, api, type PaymentDTO, type PaymentStatus, type ProviderName } from '../api';
-import { formatBRL, formatMum, isTerminal, parseReaisToCents } from '../format';
+import { formatBRL, formatMum, isResumable, isTerminal, parseReaisToCents } from '../format';
 import { CopyButton } from './CopyButton';
 import { Modal } from './Modal';
 import { PopButton } from './spell/pop-button';
@@ -19,6 +19,20 @@ export interface RechargeDialogProps {
   title?: string;
   /** Wording/styling audience. Defaults to 'operator' when `allowSimulate`, else 'visitor'. */
   audience?: 'operator' | 'visitor';
+  /** Resume an existing charge: the dialog opens on its pending step (QR, polling, pay button). */
+  initialPayment?: PaymentDTO;
+}
+
+/** The visitor's open purchase (newest resumable charge), or null when it cannot be loaded. */
+async function findOpenPayment(userId: string): Promise<PaymentDTO | null> {
+  try {
+    const list = await api.payments(userId);
+    const open = list.filter((p) => isResumable(p));
+    open.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return open[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 const PURCHASES_CLOSED = 'Compras de demonstração pausadas no momento. Tente mais tarde.';
@@ -119,6 +133,7 @@ export function RechargeDialog({
   pollIntervalMs = 2000,
   title,
   audience = allowSimulate ? 'operator' : 'visitor',
+  initialPayment,
 }: RechargeDialogProps) {
   const copy = COPY[audience];
   const pop = audience === 'visitor' && allowSimulate;
@@ -128,7 +143,7 @@ export function RechargeDialog({
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [payment, setPayment] = useState<PaymentDTO | null>(null);
+  const [payment, setPayment] = useState<PaymentDTO | null>(initialPayment ?? null);
   const [simulating, setSimulating] = useState(false);
   const mounted = useRef(true);
   const completedRef = useRef(onCompleted);
@@ -189,7 +204,11 @@ export function RechargeDialog({
       const p = await api.createPayment({ userId, amountCents: cents, provider });
       if (mounted.current) setPayment(p);
     } catch (err) {
-      if (mounted.current) setError(createErrorMessage(err));
+      // A purchase is already open: pick it up instead of only reporting the error.
+      const open = err instanceof ApiError && err.code === 'open_payment' ? await findOpenPayment(userId) : null;
+      if (!mounted.current) return;
+      if (open) setPayment(open);
+      else setError(createErrorMessage(err));
     } finally {
       if (mounted.current) setSubmitting(false);
     }

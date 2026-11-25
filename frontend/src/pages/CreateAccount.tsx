@@ -37,6 +37,7 @@ export function CreateAccount({
       }
       if (code === 'invalid_display_name') setError('Use de 2 a 40 caracteres.');
       else if (code === 'signin_disabled') setError('O acesso de visitantes está pausado no momento.');
+      else if (code === 'rate_limited') setError('Muitas tentativas. Tente mais tarde.');
       else setError('Não conseguimos entrar agora. Tente de novo.');
     } finally {
       setBusy(false);
