@@ -78,7 +78,7 @@ Site: https://mumbuca-plus-production.up.railway.app
 
 No real money is used; everything runs on Solana devnet.
 
-Limits: R$ 11 to R$ 100 per purchase, 3 purchases per wallet per 24 h and 1 pending purchase at a time. An unpaid purchase expires after 30 minutes.
+Limits: R$ 11 to R$ 100 per purchase, 3 purchases per wallet per 24 h, 1 pending purchase at a time and R$ 2,000 in total across all visitors per 24 h. An unpaid purchase expires after 30 minutes. Purchases may pause automatically (for example, once the daily total is reached).
 
 
 ## 3. The money route: BRL → BRS → Mumbuca+

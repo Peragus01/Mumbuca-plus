@@ -57,7 +57,7 @@ O caminho principal é o **Simulado**: nenhum dinheiro real e nenhuma dependênc
 3. **Solana Explorer.** Abra a transação no Explorer (cluster devnet) e mostre a **PDA de recibo** do pagamento.
 4. **Painel do operador.** Volte ao painel e mostre o pagamento do visitante, com a assinatura e o estado **Emitido**.
 5. **Idempotência:** clicar em **Reprocessar** no pagamento já emitido e mostrar que nada novo é emitido (mesma assinatura, saldo igual). Isso demonstra a idempotência do **banco de dados**: o pagamento já está `Emitido` e o backend nem chega a falar com a rede. Para a **prova on-chain**: abrir no Solana Explorer a **PDA de recibo** do pagamento (ela só existe porque a emissão ocorreu) ou, no terminal, repetir `npm run smoke:mint -w backend -- <PUBKEY> 100 <PAYMENT_REF>` com um `payment_ref` já usado (veja [solana-deploy.md](solana-deploy.md), seção 6): a rede rejeita com `PaymentRefAlreadyUsed`, porque a PDA de recibo já existe.
-6. **Opcional (parceiro real):** só se o ensaio live passou, recarga de R$ 11 com Pix real, pago ao vivo, com emissão automática. O `OZAV` é o parceiro de liquidez real e opcional; a demonstração não depende dele.
+6. **Opcional (parceiro real):** só se o ensaio live passou, recarga de R$ 11 com Pix real, pago ao vivo, com emissão automática. O parceiro de liquidez real (OZAV) é opcional; a demonstração não depende dele.
 7. **Contingência** (seção 4): compras pausadas, parceiro fora, sem internet (vídeo gravado).
 
 Limites do visitante: R$ 11 a R$ 100 por compra, 3 compras por carteira a cada 24 h, R$ 2.000 por 24 h somando todos os visitantes, 1 compra pendente por vez. Uma compra não paga expira em 30 minutos.

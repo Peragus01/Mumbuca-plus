@@ -78,7 +78,7 @@ Site: https://mumbuca-plus-production.up.railway.app
 
 Nenhum dinheiro real é usado; tudo roda na Solana devnet.
 
-Limites: de R$ 11 a R$ 100 por compra, 3 compras por carteira a cada 24 h e 1 compra pendente por vez. Uma compra não paga expira em 30 minutos.
+Limites: de R$ 11 a R$ 100 por compra, 3 compras por carteira a cada 24 h, 1 compra pendente por vez e R$ 2.000 no total de todos os visitantes a cada 24 h. Uma compra não paga expira em 30 minutos. As compras podem ser pausadas automaticamente (por exemplo, quando o total do dia é atingido).
 
 
 ## 3. A rota do dinheiro: BRL → BRS → Mumbuca+
