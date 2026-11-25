@@ -24,6 +24,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** An AWAITING_PAYMENT older than this is abandoned: it neither blocks a new purchase nor counts. */
 const STALE_MS = 30 * 60 * 1000;
 const CHAIN_CACHE_MS = 30_000;
+/** purchasesOpen() only (public status): totals may lag this much; checkCreate always reads fresh. */
+const TOTALS_CACHE_MS = 5_000;
 const OK: PolicyResult = { ok: true };
 const CLOSED: PolicyResult = { ok: false, error: 'purchases_closed' };
 
@@ -41,8 +43,9 @@ export function createVisitorPolicy(deps: {
   const maxCents = limits.maxCents < env.VISITOR_MAX_CENTS ? limits.maxCents : env.VISITOR_MAX_CENTS;
 
   let chain: { open: boolean; at: number } | null = null;
-  async function chainOpen(): Promise<boolean> {
-    if (chain && now() - chain.at < CHAIN_CACHE_MS) return chain.open;
+  /** In-flight lookup, shared by concurrent callers at cache expiry (one RPC round, not one per request). */
+  let chainLookup: Promise<boolean> | null = null;
+  async function lookupChain(): Promise<boolean> {
     let open: boolean;
     try {
       const [{ paused, configIssues }, lamports] = await Promise.all([
@@ -55,6 +58,22 @@ export function createVisitorPolicy(deps: {
     }
     chain = { open, at: now() };
     return open;
+  }
+  function chainOpen(): Promise<boolean> {
+    if (chain && now() - chain.at < CHAIN_CACHE_MS) return Promise.resolve(chain.open);
+    chainLookup ??= lookupChain().finally(() => {
+      chainLookup = null;
+    });
+    return chainLookup;
+  }
+
+  let totals: { cents: bigint; at: number } | null = null;
+  async function cachedTotalsCents(): Promise<bigint> {
+    if (totals && now() - totals.at < TOTALS_CACHE_MS) return totals.cents;
+    const { since, staleBefore } = windows();
+    const { cents } = await payments.visitorTotals(since, staleBefore);
+    totals = { cents, at: now() };
+    return cents;
   }
 
   const windows = () => {
@@ -90,9 +109,7 @@ export function createVisitorPolicy(deps: {
     },
     async purchasesOpen() {
       if (!(await gate())) return false;
-      const { since, staleBefore } = windows();
-      const { cents } = await payments.visitorTotals(since, staleBefore);
-      return cents < env.VISITOR_DAILY_CAP_CENTS;
+      return (await cachedTotalsCents()) < env.VISITOR_DAILY_CAP_CENTS;
     },
   };
 }

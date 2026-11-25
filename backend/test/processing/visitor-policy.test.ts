@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Keypair } from '@solana/web3.js';
 import { loadEnv, type Env } from '../../src/config/env.js';
 import type { CreatedVia } from '../../src/domain/payment.js';
@@ -39,7 +39,7 @@ async function setup(over: Partial<Env> = {}) {
     if (status !== 'AWAITING_PAYMENT') await payments.transition(p.id, ['AWAITING_PAYMENT'], status);
     return p;
   };
-  return { policy, chain, clock, newUser, buy };
+  return { policy, chain, clock, newUser, buy, payments };
 }
 
 const error = (r: PolicyResult) => (r.ok ? null : r.error);
@@ -156,6 +156,31 @@ describe('visitor policy', () => {
     clock.t += 29_000;
     expect(await policy.purchasesOpen()).toBe(true);
     clock.t += 2_000;
+    expect(await policy.purchasesOpen()).toBe(false);
+  });
+  it('concurrent purchasesOpen() calls at cache expiry share one chain lookup', async () => {
+    const { policy, chain, clock } = await setup();
+    const spy = vi.spyOn(chain, 'programConfig');
+    expect(await policy.purchasesOpen()).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(1);
+    clock.t += 31_000;
+    const results = await Promise.all(Array.from({ length: 5 }, () => policy.purchasesOpen()));
+    expect(results).toEqual([true, true, true, true, true]);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('purchasesOpen caches the visitor totals for 5 s; checkCreate never uses the cache', async () => {
+    const { policy, payments, newUser, buy, clock } = await setup({ VISITOR_DAILY_CAP_CENTS: 10000n });
+    const spy = vi.spyOn(payments, 'visitorTotals');
+    expect(await policy.purchasesOpen()).toBe(true);
+    expect(await policy.purchasesOpen()).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(1);
+    const a = await newUser('a');
+    await buy(a.id, 10000n);
+    // cached: still open within 5 s, but checkCreate reads fresh totals
+    expect(await policy.purchasesOpen()).toBe(true);
+    expect(error(await policy.checkCreate(a.id, 5000n))).toBe('daily_limit');
+    clock.t += 5_001;
     expect(await policy.purchasesOpen()).toBe(false);
   });
 });

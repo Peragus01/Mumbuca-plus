@@ -128,6 +128,19 @@ describe('phantom sign-in and signup', () => {
     expect(res.json()).toEqual({ error: 'rate_limited' });
   });
 
+  it('signup purges signup_ip_counts rows older than a day', async () => {
+    const t = await setupApp();
+    await t.db.query(
+      `insert into signup_ip_counts (ip_hash, day, count) values ('old', current_date - 2, 1), ('recent', current_date - 1, 1)`,
+      [],
+    );
+    expect((await signup(t, signupCookie(t, Keypair.generate()), 'Ana')).statusCode).toBe(201);
+    const { rows } = await t.db.query<{ ip_hash: string }>('select ip_hash from signup_ip_counts order by ip_hash', []);
+    expect(rows.map((r) => r.ip_hash)).not.toContain('old');
+    expect(rows.map((r) => r.ip_hash)).toContain('recent');
+    expect(rows).toHaveLength(2);
+  });
+
   it('concurrent signups for one wallet end as the same visitor', async () => {
     const t = await setupApp();
     const kp = Keypair.generate();

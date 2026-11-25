@@ -30,6 +30,11 @@ export class AuthRepository {
     await this.db.query('delete from auth_challenges where expires_at <= $1', [now]);
   }
 
+  /** Drops per-IP signup counters older than yesterday (they only matter for the current day). */
+  async deleteOldSignupCounts(): Promise<void> {
+    await this.db.query('delete from signup_ip_counts where day < current_date - 1', []);
+  }
+
   /** Counts one signup for (ipHash, day); false once the daily limit is exceeded. */
   async incrementSignupCount(ipHash: string, day: string, limit: number): Promise<boolean> {
     const { rows } = await this.db.query<{ count: number }>(

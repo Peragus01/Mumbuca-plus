@@ -153,6 +153,7 @@ export const phantomAuthRoutes: FastifyPluginAsync<PhantomAuthOptions> = async (
 
       let user = await users.findByWallet(wallet);
       if (!user) {
+        await auth.deleteOldSignupCounts(); // opportunistic purge (spec: counters live ~24 h)
         const day = new Date().toISOString().slice(0, 10);
         const ipHash = createHash('sha256').update(`${env.SESSION_SECRET}${req.ip}${day}`).digest('hex');
         if (!(await auth.incrementSignupCount(ipHash, day, env.VISITOR_SIGNUPS_PER_IP_PER_DAY))) {

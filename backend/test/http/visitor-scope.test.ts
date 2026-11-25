@@ -55,12 +55,16 @@ describe('visitor scope', () => {
     }
   });
 
-  it("other's payment: get and simulate → 404; own → 200", async () => {
-    const { asA, payA, payB } = await setup();
+  it("other's payment: get and simulate → 404; own → 200 (simulate: own visitor charge only)", async () => {
+    const { asA, a, payA, payB } = await setup();
     expect((await asA('GET', `/api/payments/${payB}`)).statusCode).toBe(404);
     expect((await asA('POST', `/api/payments/${payB}/simulate`)).statusCode).toBe(404);
     expect((await asA('GET', `/api/payments/${payA}`)).statusCode).toBe(200);
-    expect((await asA('POST', `/api/payments/${payA}/simulate`)).statusCode).toBe(200);
+    // payA was created by the operator: visitors may not simulate it
+    expect((await asA('POST', `/api/payments/${payA}/simulate`)).statusCode).toBe(404);
+    const own = await asA('POST', '/api/payments', { userId: a.id, provider: 'simulated', amountCents: '5000' });
+    expect(own.statusCode).toBe(201);
+    expect((await asA('POST', `/api/payments/${own.json().id}/simulate`)).statusCode).toBe(200);
   });
 
   it('create: userId from session, createdVia visitor', async () => {
