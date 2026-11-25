@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { TokenGateway } from '../../chain/token-gateway.js';
 import { DuplicateUser, InvalidWalletAddress, type User, type UserRepository } from '../../repositories/user-repository.js';
+import { requireOperator } from '../auth.js';
 import { errorClass, isUuid } from '../errors.js';
 
 export interface UserRoutesOptions {
@@ -17,7 +18,10 @@ export const toUserDto = (u: User) => ({
 });
 
 export const userRoutes: FastifyPluginAsync<UserRoutesOptions> = async (app, { users, token }) => {
-  app.get('/users', async () => (await users.list()).map(toUserDto));
+  app.get('/users', async (req, reply) => {
+    if (requireOperator(req, reply)) return reply;
+    return (await users.list()).map(toUserDto);
+  });
 
   app.post<{ Body: { handle: string; displayName: string; walletAddress: string } }>(
     '/users',
@@ -35,6 +39,7 @@ export const userRoutes: FastifyPluginAsync<UserRoutesOptions> = async (app, { u
       },
     },
     async (req, reply) => {
+      if (requireOperator(req, reply)) return reply;
       try {
         const u = await users.create(req.body);
         return reply.code(201).send(toUserDto(u));

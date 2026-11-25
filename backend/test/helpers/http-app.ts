@@ -54,13 +54,15 @@ export async function setupApp(over: Partial<Env> = {}, opts: { staticDir?: stri
   }
   const cookie = await login();
 
+  const visitorCookie = (userId: string): string => `mp_session=${app.signCookie(`v2:vis:${userId}:${Date.now()}`)}`;
+
   const api = (method: 'GET' | 'POST', url: string, payload?: object) =>
     app.inject({ method, url, payload, headers: { cookie } });
 
   const newUser = (handle = 'ana') =>
     users.create({ handle, displayName: handle.toUpperCase(), walletAddress: Keypair.generate().publicKey.toBase58() });
 
-  return { db, app, env, chain, ozav, providers, processor, users, payments, cookie, login, api, newUser };
+  return { db, app, env, chain, ozav, providers, processor, users, payments, cookie, login, visitorCookie, api, newUser };
 }
 
 export function signedWebhook(event: object, opts: { secret?: string; t?: number } = {}) {
