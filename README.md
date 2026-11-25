@@ -20,7 +20,7 @@
 8. [Arquitetura](#8-arquitetura)
 9. [Fluxo ponta a ponta](#9-fluxo-ponta-a-ponta)
 10. [Engenharia web3 e segurança](#10-engenharia-web3-e-segurança)
-11. [O token Mumbuca+ (Mum+)](#11-o-token-mumbuca-mum)
+11. [O contrato inteligente e o token Mum+](#11-o-contrato-inteligente-e-o-token-mum)
 12. [Como isso fortalece a política pública](#12-como-isso-fortalece-a-política-pública)
 13. [Escopo da prova de conceito](#13-escopo-da-prova-de-conceito)
 14. [Estrutura do repositório e documentação](#14-estrutura-do-repositório-e-documentação)
@@ -65,6 +65,8 @@ Cada compra também apoia a cultura local. Na prova de conceito, os benefícios 
 7. Nenhum pagamento gera emissão duplicada, mesmo com reenvios, quedas de rede ou reinícios do servidor.
 8. Com Mum+, o visitante gasta na rede credenciada de Maricá e aproveita os benefícios e descontos do programa.
 
+**Na demonstração pública,** o visitante entra com a carteira Phantom e cria a conta com um nome de exibição. O Pix dos passos 2 e 3 é simulado pelo próprio backend, com o botão "Pagar agora (demonstração)". A emissão do passo 4 é real: o contrato inteligente na Solana devnet emite os Mum+ na carteira do visitante (ver seção 11). A integração com o parceiro de liquidez está pronta e usa o mesmo caminho, trocando só o provedor.
+
 ### Teste você mesmo
 
 Site: https://mumbuca-plus-production.up.railway.app
@@ -76,10 +78,9 @@ Site: https://mumbuca-plus-production.up.railway.app
 5. Clique em **Pagar agora (demonstração)**.
 6. Os Mum+ aparecem na Phantom (Devnet) e no Solana Explorer.
 
-Nenhum dinheiro real é usado; tudo roda na Solana devnet.
+Nenhum dinheiro real é usado; tudo roda na Solana devnet. O contrato e o token podem ser conferidos no Solana Explorer: [programa](https://explorer.solana.com/address/HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm?cluster=devnet) e [token Mum+](https://explorer.solana.com/address/8kHEAtmxYof8GCw2LhoKLLg5DmJGaR1qkuBH2qdMSBuk?cluster=devnet).
 
 Limites: de R$ 11 a R$ 100 por compra, 3 compras por carteira a cada 24 h, 1 compra pendente por vez e R$ 2.000 no total de todos os visitantes a cada 24 h. Uma compra não paga expira em 30 minutos. As compras podem ser pausadas automaticamente (por exemplo, quando o total do dia é atingido).
-
 
 ## 3. A rota do dinheiro: BRL → BRS → Mumbuca+
 
@@ -236,10 +237,9 @@ flowchart TB
 | Registro de carteiras | Liga cada usuário (fictício na demo) a um endereço Solana validado (chave pública base58) |
 | Serviço de emissão | Simula, envia `mint`, acompanha a confirmação e recupera falhas sem duplicar |
 | Banco de transações | Histórico completo e auditável de cada pagamento e transição |
-| Dashboard | "Minha carteira" do visitante (saldo, compra de Mum+, benefícios em Maricá, histórico) e visão do operador (todos os pagamentos, assinaturas, ações) |
+| Dashboard | Entrada com login pela Phantom e criação de conta; "Minha carteira" do visitante (saldo, compra de Mum+, benefícios em Maricá, histórico); visão do operador, com senha (todos os pagamentos, assinaturas, ações) |
 
 **Login e escopo.** O visitante entra por assinatura de mensagem (estilo SIWS): o servidor emite um desafio com nonce de uso único, válido por 5 minutos e guardado no servidor, e confere a assinatura ed25519. A sessão carrega um papel (operador ou visitante), e o servidor limita cada requisição do visitante aos próprios dados: recurso de outra pessoa responde 404 e rota de operador responde 403. O visual usa o [Spell UI](https://spell.sh) (MIT): AnimatedGradient e PopButton.
-
 
 **Tecnologias:** Rust e Anchor 1.2 (programa), SPL Token-2022 com metadata on-chain (token), Solana CLI (implantação), Node.js 22, TypeScript, Fastify e Postgres (backend), `@solana/web3.js` (blockchain), React e Vite (dashboard), Phantom (carteira), Railway (hospedagem).
 
@@ -321,26 +321,74 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - **Nada é emitido só porque chegou uma notificação.** O pagamento sempre é confirmado na fonte da verdade.
 - O webhook é autenticado por HMAC-SHA256, com janela de tempo e comparação em tempo constante.
 - O programa limita o dano de uma eventual chave vazada: teto total, limite por emissão e pausa de emergência.
-- Toda a URL pública fica atrás de login. Desconhecidos não criam compras nem disparam emissões.
 
-## 11. O token Mumbuca+ (Mum+)
+**Proteções do site público.** Qualquer pessoa com uma Phantom em devnet pode testar o site, então o servidor protege o acesso e a carteira emissora:
+- **Login por assinatura:** o visitante assina uma mensagem com um código de uso único, válido por 5 minutos. A assinatura não autoriza nenhuma transação, e o servidor guarda só o endereço da carteira e um nome de exibição.
+- **Dados de cada um:** o visitante só vê o próprio saldo e as próprias compras. As funções do operador ficam atrás de senha.
+- **Limites de compra:**
+  - de R$ 11 a R$ 100 por compra;
+  - 3 compras por carteira a cada 24 h;
+  - R$ 2.000 no total de todos os visitantes a cada 24 h;
+  - uma compra pendente por vez, que expira em 30 minutos.
+  Compras disparadas ao mesmo tempo são processadas uma de cada vez, para ninguém furar os limites.
+- **Limite de tentativas** por conta de visitante e por IP, com um teto de contas novas por IP por dia. O IP é guardado só como hash.
+- **Pausa automática:** as compras param sozinhas quando falta SOL na carteira emissora, quando a emissão está pausada no contrato ou quando a configuração on-chain diverge da esperada.
+
+## 11. O contrato inteligente e o token Mum+
+
+O contrato inteligente do Mumbuca+ é um **programa Solana escrito em Rust com Anchor 1.2** (`anchor/programs/mumbuca_plus`). Ele é o único caminho para criar Mum+. Ele **emite o token só contra um pagamento liquidado**, uma única vez por pagamento, dentro de limites gravados on-chain.
+
+### Endereços na Solana devnet
+
+| Conta | Endereço | O que é |
+|---|---|---|
+| Programa | [`HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm`](https://explorer.solana.com/address/HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm?cluster=devnet) | O contrato inteligente `mumbuca_plus` |
+| Mint do Mum+ | [`8kHEAtmxYof8GCw2LhoKLLg5DmJGaR1qkuBH2qdMSBuk`](https://explorer.solana.com/address/8kHEAtmxYof8GCw2LhoKLLg5DmJGaR1qkuBH2qdMSBuk?cluster=devnet) | O token Mum+ (Token-2022), PDA `["mint"]` |
+| Configuração | [`ULjPXhucQKj89cRsMSbejQktWeqYqRdyWTD7jnWo4ZX`](https://explorer.solana.com/address/ULjPXhucQKj89cRsMSbejQktWeqYqRdyWTD7jnWo4ZX?cluster=devnet) | PDA `["config"]`: guarda papéis, limites e estado. É também a autoridade de emissão do mint |
+| Administrador e pausador | [`CynA6i1MpS1HvE8kwaCsFx6cEzzQ5Vv1zxuPMZAAZmSV`](https://explorer.solana.com/address/CynA6i1MpS1HvE8kwaCsFx6cEzzQ5Vv1zxuPMZAAZmSV?cluster=devnet) | Conta do gestor. Também pode atualizar o programa |
+| Emissor (minter) | [`5zB8nAJqHA6chMg27iiR3Md6aXL5WgmFY7z9ri25FzDT`](https://explorer.solana.com/address/5zB8nAJqHA6chMg27iiR3Md6aXL5WgmFY7z9ri25FzDT?cluster=devnet) | Conta do backend, a única que pode pedir uma emissão |
+
+### O que o contrato faz
+
+| Instrução | Quem pode chamar | O que faz |
+|---|---|---|
+| `initialize` | Quem implanta (vira administrador) | Cria a configuração e o mint do Mum+ com nome, símbolo e 2 casas decimais. Define teto total, limite por emissão, emissor e pausador |
+| `mint_for_payment(payment_ref, amount)` | Só o emissor | Emite `amount` Mum+ na carteira do comprador por um pagamento liquidado. Cria a conta de token da carteira se ela ainda não existir |
+| `pause` / `unpause` | Só o pausador | Suspende ou retoma **novas emissões**. Saldos e transferências não são afetados |
+| `set_minter`, `set_pauser`, `set_max_mint_per_tx` | Só o administrador | Troca o emissor, troca o pausador e ajusta o limite por emissão |
+
+Antes de cada emissão, o programa confere que:
+- quem assina é o emissor (senão, `Unauthorized`);
+- a emissão não está pausada (`Paused`);
+- o valor é maior que zero (`InvalidAmount`);
+- o valor não passa do limite por emissão (`ExceedsMaxPerTx`);
+- o total emitido não passa do teto (`CapExceeded`), com aritmética verificada (`MathOverflow`).
+
+**Um pagamento, uma emissão.** Cada emissão cria uma conta de recibo, a PDA `["receipt", payment_ref]`, com a referência do pagamento, o destinatário, o valor e o slot. Se alguém tentar emitir de novo para o mesmo pagamento, a transação falha na própria rede. O `payment_ref` é `keccak256("<provedor>:<id do pagamento>")`.
+
+**Ninguém emite por fora.** A autoridade de emissão do mint é a PDA de configuração, que só o próprio programa controla. Não há chave privada capaz de criar Mum+ fora dessas regras. O mint **não tem autoridade de congelamento**, então nenhuma conta pode ter o saldo congelado.
+
+**Auditoria.** Cada emissão emite o evento `MintedForPayment`, com destinatário, valor, referência do pagamento e slot. A transação pode ser conferida por qualquer pessoa no Solana Explorer.
+
+### O token Mum+
 
 | Propriedade | Valor |
 |---|---|
 | Natureza | Utility token do ecossistema da moeda social de Maricá (ver seção 5) |
-| Padrão | SPL Token-2022 (extensões MetadataPointer e TokenMetadata) |
+| Padrão | SPL Token-2022, com metadata gravada no próprio mint (MetadataPointer e TokenMetadata) |
 | Nome / símbolo | Mumbuca+ / Mum+ |
 | Decimais | 2. 1 unidade = R$ 0,01, então centavos viram unidades sem conversão |
-| Autoridade de emissão | PDA do programa: nenhuma chave privada emite fora das regras on-chain |
+| Autoridade de emissão | PDA de configuração do programa |
+| Autoridade de congelamento | Nenhuma |
 | Supply inicial | 0. Tudo é emitido contra pagamento liquidado (DvP) |
 | Teto de supply | 10.000.000 Mum+ |
 | Limite por emissão | 20.000 Mum+ (ajustável pelo administrador) |
 | Papéis | Administrador (gestor), Emissor (backend), Pausador (gestor) |
-| Pausa | Suspende só novas emissões. Saldos e transferências continuam |
-| Rastreabilidade | Evento `MintedForPayment` e conta de recibo on-chain por pagamento |
-| Rede | Solana devnet, com o programa Anchor implantado pela Solana/Anchor CLI |
+| Rede | Solana devnet |
 
 **Paridade:** 1 Mum+ = R$ 1,00.
+
+**Testes do programa:** 17 testes em Rust contra o runtime da Solana (LiteSVM). Eles cobrem as emissões permitidas e cada recusa: emissor errado, pausa, valor zero, limite por emissão, teto e pagamento repetido.
 
 ## 12. Como isso fortalece a política pública
 
@@ -363,8 +411,9 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - Compra de Mum+ via Pix pelo parceiro de liquidez, nos ambientes de teste e real (R$ 11).
 - Validação na fonte da verdade.
 - DvP automático e idempotente.
+- Site público com login pela Phantom, criação de conta e compra de demonstração, com limites e pausa automática.
 - "Minha carteira" do visitante, com uma seção "Benefícios em Maricá" ilustrativa, e painel do operador.
-- Simulação local para contingência.
+- Provedor simulado para a demonstração pública e para contingência.
 
 **Fica para fases futuras:**
 - Restrição de transferências a carteiras credenciadas (transfer hook do Token-2022).
@@ -379,7 +428,12 @@ Falhas temporárias, como instabilidade de rede, timeout ou parceiro fora do ar,
 - Prova de reservas on-chain.
 - Rede principal (mainnet).
 
-**Status:** a implementação está completa e publicada. O programa está na Solana devnet, e o app (backend + dashboard) está no Railway. A demonstração ao vivo usa o provedor simulado, enquanto a integração com o parceiro de liquidez está pronta, faltando só as credenciais. Veja o [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md), o [plano de implementação](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md) e o [redesign](docs/superpowers/specs/2026-11-24-redesign-c2-design.md).
+**Status:** a implementação está completa e publicada. O contrato está na Solana devnet (endereços na seção 11), e o app (backend + dashboard) está no ar em https://mumbuca-plus-production.up.railway.app, aberto a qualquer pessoa com Phantom em devnet. A demonstração usa o provedor simulado. A integração com o parceiro de liquidez está pronta e só faltam as credenciais.
+
+Documentos de projeto:
+- [design do MVP](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) e [plano](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md);
+- [redesign visual](docs/superpowers/specs/2026-11-24-redesign-c2-design.md);
+- [conta de visitante com login pela Phantom](docs/superpowers/specs/2026-11-25-visitor-phantom-login-design.md) e [plano](docs/superpowers/plans/2026-11-25-visitor-phantom-login.md).
 
 ## 14. Estrutura do repositório e documentação
 
@@ -388,8 +442,8 @@ anchor/        programa mumbuca_plus (Rust/Anchor) e testes
 backend/       API, webhook, processador, emissão (Node.js + TypeScript)
 frontend/      dashboard (React + Vite)
 docs/
-  superpowers/specs/   documento de design
-  superpowers/plans/   plano de implementação
+  superpowers/specs/   documentos de design
+  superpowers/plans/   planos de implementação
   solana-deploy.md     tutorial de implantação na devnet
   demo-runbook.md      roteiro da demonstração e contingências
 ```

@@ -20,7 +20,7 @@
 8. [Architecture](#8-architecture)
 9. [End-to-end flow](#9-end-to-end-flow)
 10. [Web3 engineering and security](#10-web3-engineering-and-security)
-11. [The Mumbuca+ token (Mum+)](#11-the-mumbuca-token-mum)
+11. [The smart contract and the Mum+ token](#11-the-smart-contract-and-the-mum-token)
 12. [How this strengthens the public policy](#12-how-this-strengthens-the-public-policy)
 13. [Proof-of-concept scope](#13-proof-of-concept-scope)
 14. [Repository layout and documentation](#14-repository-layout-and-documentation)
@@ -65,6 +65,8 @@ Every purchase also supports local culture. In the proof of concept, the benefit
 7. No payment is ever minted twice, even with redeliveries, network failures or server restarts.
 8. With Mum+, the visitor spends in Maricá's accredited network and enjoys the program's benefits and discounts.
 
+**In the public demo,** the visitor signs in with their Phantom wallet and creates an account with a display name. The Pix in steps 2 and 3 is simulated by the backend itself, with the "Pagar agora (demonstração)" button. The issuance in step 4 is real: the smart contract on Solana devnet issues the Mum+ to the visitor's wallet (see section 11). The liquidity-partner integration is ready and follows the same path; only the provider changes.
+
 ### Try it yourself
 
 Site: https://mumbuca-plus-production.up.railway.app
@@ -76,10 +78,9 @@ Site: https://mumbuca-plus-production.up.railway.app
 5. Click **Pagar agora (demonstração)** (pay now, demo).
 6. The Mum+ shows up in Phantom (Devnet) and on Solana Explorer.
 
-No real money is used; everything runs on Solana devnet.
+No real money is used; everything runs on Solana devnet. You can check the contract and the token on Solana Explorer: [program](https://explorer.solana.com/address/HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm?cluster=devnet) and [Mum+ token](https://explorer.solana.com/address/8kHEAtmxYof8GCw2LhoKLLg5DmJGaR1qkuBH2qdMSBuk?cluster=devnet).
 
 Limits: R$ 11 to R$ 100 per purchase, 3 purchases per wallet per 24 h, 1 pending purchase at a time and R$ 2,000 in total across all visitors per 24 h. An unpaid purchase expires after 30 minutes. Purchases may pause automatically (for example, once the daily total is reached).
-
 
 ## 3. The money route: BRL → BRS → Mumbuca+
 
@@ -268,10 +269,9 @@ flowchart TB
 | Wallet registry | Links each user (fictitious in the demo) to a validated Solana address (base58 public key) |
 | Minting service | Simulates, sends `mint`, tracks confirmation, recovers from failures without duplicating |
 | Transaction database | Complete, auditable history of every payment and transition |
-| Dashboard | Visitor "My wallet" (balance, buying Mum+, benefits in Maricá, history) and operator view (all payments, signatures, actions) |
+| Dashboard | Entry screen with Phantom sign-in and account creation; visitor "My wallet" (balance, buying Mum+, benefits in Maricá, history); password-protected operator view (all payments, signatures, actions) |
 
 **Sign-in and scoping.** Visitors sign in by message signature (SIWS-style): the server issues a challenge with a single-use nonce, valid for 5 minutes and stored server-side, and verifies the ed25519 signature. The session carries a role (operator or visitor), and the server scopes every visitor request to the visitor's own data: another person's resource returns 404 and an operator route returns 403. The look uses [Spell UI](https://spell.sh) (MIT): AnimatedGradient and PopButton.
-
 
 **Stack:**
 - Program: Rust and Anchor 1.2.
@@ -361,26 +361,74 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 - **Nothing is minted just because a notification arrived.** The payment is always confirmed at the source of truth.
 - Webhooks are authenticated with HMAC-SHA256, a time window and constant-time comparison.
 - The program limits the damage from a leaked key: total cap, per-issuance limit and an emergency pause.
-- The entire public URL is behind a login. Strangers cannot create purchases or trigger issuance.
 
-## 11. The Mumbuca+ token (Mum+)
+**Public-site protections.** Anyone with a Phantom wallet on devnet can try the site, so the server protects access and the minter wallet:
+- **Sign-in by signature:** the visitor signs a message carrying a single-use code that is valid for 5 minutes. The signature authorizes no transaction, and the server stores only the wallet address and a display name.
+- **Each visitor's own data:** a visitor sees only their own balance and purchases. Operator functions stay behind a password.
+- **Purchase limits:**
+  - R$ 11 to R$ 100 per purchase;
+  - 3 purchases per wallet every 24 h;
+  - R$ 2,000 in total across all visitors every 24 h;
+  - one pending purchase at a time, which expires after 30 minutes.
+  Purchases sent at the same time are processed one at a time, so no one can get past the limits.
+- **Attempt limits** per visitor account and per IP, with a cap on new accounts per IP per day. The IP is stored only as a hash.
+- **Automatic pause:** purchases stop by themselves when the minter wallet runs low on SOL, when minting is paused in the contract, or when the on-chain configuration differs from the expected one.
+
+## 11. The smart contract and the Mum+ token
+
+The Mumbuca+ smart contract is a **Solana program written in Rust with Anchor 1.2** (`anchor/programs/mumbuca_plus`). It is the only way to create Mum+. It **issues the token only against a settled payment**, once per payment, within limits stored on-chain.
+
+### Addresses on Solana devnet
+
+| Account | Address | What it is |
+|---|---|---|
+| Program | [`HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm`](https://explorer.solana.com/address/HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm?cluster=devnet) | The `mumbuca_plus` smart contract |
+| Mum+ mint | [`8kHEAtmxYof8GCw2LhoKLLg5DmJGaR1qkuBH2qdMSBuk`](https://explorer.solana.com/address/8kHEAtmxYof8GCw2LhoKLLg5DmJGaR1qkuBH2qdMSBuk?cluster=devnet) | The Mum+ token (Token-2022), PDA `["mint"]` |
+| Configuration | [`ULjPXhucQKj89cRsMSbejQktWeqYqRdyWTD7jnWo4ZX`](https://explorer.solana.com/address/ULjPXhucQKj89cRsMSbejQktWeqYqRdyWTD7jnWo4ZX?cluster=devnet) | PDA `["config"]`: holds roles, limits and state. It is also the mint authority |
+| Admin and pauser | [`CynA6i1MpS1HvE8kwaCsFx6cEzzQ5Vv1zxuPMZAAZmSV`](https://explorer.solana.com/address/CynA6i1MpS1HvE8kwaCsFx6cEzzQ5Vv1zxuPMZAAZmSV?cluster=devnet) | The governor's account. It can also upgrade the program |
+| Minter | [`5zB8nAJqHA6chMg27iiR3Md6aXL5WgmFY7z9ri25FzDT`](https://explorer.solana.com/address/5zB8nAJqHA6chMg27iiR3Md6aXL5WgmFY7z9ri25FzDT?cluster=devnet) | The backend's account, the only one that can request an issuance |
+
+### What the contract does
+
+| Instruction | Who can call it | What it does |
+|---|---|---|
+| `initialize` | Whoever deploys (becomes admin) | Creates the configuration and the Mum+ mint with name, symbol and 2 decimals. Sets the total cap, the per-issuance limit, the minter and the pauser |
+| `mint_for_payment(payment_ref, amount)` | Minter only | Issues `amount` Mum+ to the buyer's wallet for a settled payment. Creates the wallet's token account if it does not exist yet |
+| `pause` / `unpause` | Pauser only | Suspends or resumes **new issuance**. Balances and transfers are not affected |
+| `set_minter`, `set_pauser`, `set_max_mint_per_tx` | Admin only | Changes the minter, changes the pauser and adjusts the per-issuance limit |
+
+Before each issuance, the program checks that:
+- the signer is the minter (otherwise `Unauthorized`);
+- issuance is not paused (`Paused`);
+- the amount is greater than zero (`InvalidAmount`);
+- the amount is within the per-issuance limit (`ExceedsMaxPerTx`);
+- the total issued stays within the cap (`CapExceeded`), with checked arithmetic (`MathOverflow`).
+
+**One payment, one issuance.** Each issuance creates a receipt account, the PDA `["receipt", payment_ref]`, holding the payment reference, the recipient, the amount and the slot. Any attempt to issue again for the same payment fails on the network itself. The `payment_ref` is `keccak256("<provider>:<payment id>")`.
+
+**No one can issue outside the rules.** The mint authority is the configuration PDA, which only the program itself controls. No private key can create Mum+ outside these rules. The mint has **no freeze authority**, so no account's balance can be frozen.
+
+**Audit.** Each issuance emits the `MintedForPayment` event, with recipient, amount, payment reference and slot. Anyone can check the transaction on Solana Explorer.
+
+### The Mum+ token
 
 | Property | Value |
 |---|---|
 | Nature | Utility token of Maricá's social-currency ecosystem (see section 5) |
-| Standard | SPL Token-2022 (MetadataPointer and TokenMetadata extensions) |
+| Standard | SPL Token-2022, with metadata stored in the mint itself (MetadataPointer and TokenMetadata) |
 | Name / symbol | Mumbuca+ / Mum+ |
 | Decimals | 2. 1 unit = R$ 0.01, so cents map to units with no conversion |
-| Mint authority | Program PDA: no private key can issue outside the on-chain rules |
+| Mint authority | The program's configuration PDA |
+| Freeze authority | None |
 | Initial supply | 0. Everything is issued against settled payment (DvP) |
 | Supply cap | 10,000,000 Mum+ |
 | Per-issuance limit | 20,000 Mum+ (adjustable by the admin) |
 | Roles | Admin (governor), Minter (backend), Pauser (governor) |
-| Pause | Suspends new issuance only. Balances and transfers keep working |
-| Traceability | `MintedForPayment` event plus an on-chain receipt account per payment |
-| Network | Solana devnet. Anchor program deployed with the Solana/Anchor CLI |
+| Network | Solana devnet |
 
 **Peg:** 1 Mum+ = R$ 1.00.
+
+**Program tests:** 17 Rust tests against the Solana runtime (LiteSVM). They cover allowed issuance and each rejection: wrong minter, pause, zero amount, per-issuance limit, cap and a repeated payment.
 
 ## 12. How this strengthens the public policy
 
@@ -403,8 +451,9 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 - Buying Mum+ via Pix through the liquidity partner, in the test and production environments (R$ 11).
 - Validation at the source of truth.
 - Automatic, idempotent DvP.
+- A public site with Phantom sign-in, account creation and demo purchases, with limits and an automatic pause.
 - Visitor "My wallet" with an illustrative "Benefits in Maricá" section, and the operator dashboard.
-- Local simulation as a fallback.
+- A simulated provider for the public demo and as a fallback.
 
 **Future phases:**
 - Restricting transfers to accredited wallets (Token-2022 transfer hook).
@@ -419,7 +468,12 @@ Transient failures do **not** lead to `FAILED`. These include network instabilit
 - On-chain proof of reserves.
 - Mainnet.
 
-**Status:** implementation is complete and published. The program is on Solana devnet and the app (backend and dashboard) is on Railway. The live demo uses the simulated provider. The liquidity-partner integration is ready and only needs credentials. See the [design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md), the [implementation plan](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md) and the [redesign](docs/superpowers/specs/2026-11-24-redesign-c2-design.md); all three are in Portuguese.
+**Status:** implementation is complete and published. The contract is on Solana devnet (addresses in section 11), and the app (backend and dashboard) is live at https://mumbuca-plus-production.up.railway.app, open to anyone with Phantom on devnet. The demo uses the simulated provider. The liquidity-partner integration is ready and only needs credentials.
+
+Project documents (in Portuguese):
+- [MVP design](docs/superpowers/specs/2026-11-23-mumbuca-plus-mvp-design.md) and [plan](docs/superpowers/plans/2026-11-23-mumbuca-plus-mvp.md);
+- [visual redesign](docs/superpowers/specs/2026-11-24-redesign-c2-design.md);
+- [visitor accounts with Phantom sign-in](docs/superpowers/specs/2026-11-25-visitor-phantom-login-design.md) and [plan](docs/superpowers/plans/2026-11-25-visitor-phantom-login.md).
 
 ## 14. Repository layout and documentation
 
@@ -428,8 +482,8 @@ anchor/        mumbuca_plus program (Rust/Anchor) and tests
 backend/       API, webhook, processor, minting (Node.js + TypeScript)
 frontend/      dashboard (React + Vite)
 docs/
-  superpowers/specs/   design document
-  superpowers/plans/   implementation plan
+  superpowers/specs/   design documents
+  superpowers/plans/   implementation plans
   solana-deploy.md     devnet deployment guide
   demo-runbook.md      demo script and contingencies
 ```
