@@ -1535,3 +1535,22 @@ textarea.code {
 .entry .field {
   text-align: left;
 }
+
+/* ---------- visitor app ---------- */
+
+.visitor-app {
+  position: relative;
+}
+.visitor-app__bg {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 340px;
+  opacity: 0.35;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 40%, transparent);
+  mask-image: linear-gradient(#000 40%, transparent);
+}
+.visitor-app > .topbar,
+.visitor-app > .content {
+  position: relative;
+}

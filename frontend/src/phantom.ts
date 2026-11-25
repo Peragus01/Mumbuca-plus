@@ -2,6 +2,7 @@
 
 export interface PhantomProvider {
   isPhantom?: boolean;
+  disconnect?(): Promise<void>;
   connect(): Promise<{ publicKey: { toString(): string } }>;
   signMessage(message: Uint8Array, display?: 'utf8' | 'hex'): Promise<{ signature: Uint8Array }>;
 }

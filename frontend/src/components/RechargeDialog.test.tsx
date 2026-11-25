@@ -174,4 +174,36 @@ describe('RechargeDialog', () => {
     expect(screen.getByText('Recarga concluída')).toBeTruthy();
     expect(screen.queryByText(/Compra/)).toBeNull();
   });
+  describe('visitor audience', () => {
+    it('shows the purchase title and demo pay button', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => json(201, payment())));
+      render(<RechargeDialog userId={USER_ID} provider="simulated" audience="visitor" allowSimulate onClose={() => {}} />);
+      expect(screen.getByText('Comprar Mum+ via Pix')).toBeTruthy();
+      fillAndSubmit('50');
+      expect(await screen.findByRole('button', { name: 'Pagar agora (demonstração)' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Simular pagamento/ })).toBeNull();
+    });
+
+    it.each([
+      [429, 'daily_limit', 'Você atingiu o limite de compras de hoje.'],
+      [409, 'open_payment', 'Você já tem uma compra aguardando pagamento.'],
+      [409, 'purchases_closed', 'Compras de demonstração pausadas no momento. Tente mais tarde.'],
+    ])('maps %s %s on create', async (status, code, message) => {
+      vi.stubGlobal('fetch', vi.fn(async () => json(status, { error: code })));
+      render(<RechargeDialog userId={USER_ID} provider="simulated" audience="visitor" allowSimulate onClose={() => {}} />);
+      fillAndSubmit('50');
+      expect(await screen.findByText(message)).toBeTruthy();
+    });
+
+    it('maps payment_expired on simulate', async () => {
+      const fetchMock = vi.fn(async (url: string) =>
+        url.endsWith('/simulate') ? json(409, { error: 'payment_expired' }) : json(201, payment()),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      render(<RechargeDialog userId={USER_ID} provider="simulated" audience="visitor" allowSimulate onClose={() => {}} />);
+      fillAndSubmit('50');
+      fireEvent.click(await screen.findByRole('button', { name: 'Pagar agora (demonstração)' }));
+      expect(await screen.findByText('Esta compra expirou. Comece uma nova compra.')).toBeTruthy();
+    });
+  });
 });
