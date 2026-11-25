@@ -142,7 +142,42 @@ Os valores são minha proposta e podem ser ajustados por variável de ambiente:
   - o diálogo de compra usa o fluxo simulado (`allowSimulate`), com os valores dentro dos limites de visitante e um aviso curto se as compras estiverem fechadas;
   - "Sair" encerra a sessão; na Phantom, opcionalmente, `disconnect()`.
 - **Operador:** igual a hoje, com a aba "Operador" e o seletor de conta.
-- **Nenhuma dependência nova no frontend.** O acesso à Phantom é feito por uma pequena camada `phantom.ts` tipada, que facilita os testes com um mock.
+- O acesso à Phantom é feito por uma pequena camada `phantom.ts` tipada, que facilita os testes com um mock.
+
+### Visual (UX) — Spell UI
+
+**Decisão do dono:** usar os componentes originais do [Spell UI](https://spell.sh) (licença MIT, repositório `xxtomm/spell-ui`), em vez de recriar os efeitos. O esboço aprovado para o visual tem quatro telas: Entrada, Criar conta, Minha carteira e Sem Phantom.
+
+- **Tom:** o visitante vê **só telas**. Nenhuma regra ou texto técnico aparece; os limites só aparecem como mensagens curtas quando atingidos.
+- **`AnimatedGradient`** (shader WebGL2):
+  - é o fundo da tela de **Entrada**, em tela cheia;
+  - aparece mais suave (opacidade menor, sob um véu escuro) em Criar conta, Sem Phantom e no topo de Minha carteira;
+  - usa `preset: "custom"` com as cores de Maricá: `color1 #06150f`, `color2 #3dffa8`, `color3 #ffd23f`, ajustando `speed`, `swirl` e `softness` até ficar parecido com o esboço;
+  - **sem WebGL2**, fica o fundo escuro C2 sólido;
+  - com `prefers-reduced-motion`, o gradiente fica parado.
+- **`PopButton`** (borda inferior grossa que "afunda" ao clicar):
+  - é o botão principal em todas as telas do visitante: Entrar com Phantom, Criar conta, ＋ Comprar Mum+, Instalar Phantom;
+  - também nos botões do diálogo de compra (Pix);
+  - o painel do operador continua com os botões atuais.
+- **Cores dos botões:**
+  - **Principal:** uma variante nova `marica` (fundo `#ffd23f`, borda `#a8840a`, texto `#1a1400`). O `amber` original usa texto branco sobre âmbar, o que não passa no contraste WCAG AA. A variante nova é só uma entrada a mais no mapa de cores do componente.
+  - **Secundário:** `default`.
+  - O `purple` não é usado, porque não faz parte da identidade de Maricá.
+- **Título da Entrada:** "Gaste em Maricá *com vantagens*", com a segunda linha em itálico serifado e amarelo, no estilo do exemplo do Spell UI.
+- **Fonte DynaPuff do PopButton:** não é usada. Nada de fontes externas; continua a fonte do sistema.
+
+**Como entra no projeto:**
+- Tailwind CSS v4 pelo plugin `@tailwindcss/vite`, importando **só `theme` e `utilities`**, sem o `preflight`. Assim o reset do Tailwind não mexe no CSS C2 existente.
+- Dependências novas:
+  - `tailwindcss`, `@tailwindcss/vite`;
+  - `@radix-ui/react-slot`;
+  - `clsx` e `tailwind-merge`, para o `cn` em `src/lib/utils.ts`.
+- Alias `@/` → `src/` no Vite e no TypeScript, para os imports originais funcionarem.
+- **Código dos componentes:**
+  - fica em `src/components/spell/`, copiado do registro, com cabeçalho de atribuição MIT;
+  - a única alteração no `animated-gradient` é trocar o `useTheme` do `next-themes` (feito para Next.js) por um retorno fixo `"dark"`, porque o site é só escuro;
+  - no `pop-button`, a única alteração é a variante `marica`.
+- Nos testes (jsdom não tem WebGL2), o gradiente não pode quebrar: ele precisa simplesmente não desenhar nada.
 
 ### Dados
 
@@ -163,7 +198,7 @@ Os valores são minha proposta e podem ser ajustados por variável de ambiente:
 
 - Node 22, Fastify 5, React 19 e Vite, como hoje.
 - Backend: a verificação ed25519 usa `@noble/curves` (`ed25519.verify`), adicionado como dependência direta. Ele já vem com `@solana/web3.js`, então não entra código novo de terceiros.
-- Frontend: sem dependências novas.
+- Frontend: as dependências novas são só as do Spell UI (ver "Visual").
 - TDD, como no resto do projeto:
   - testes de rota com PGlite para cada linha da tabela de escopo;
   - assinatura válida e inválida, nonce reutilizado ou expirado, carteira trocada;
@@ -184,8 +219,9 @@ Os valores são minha proposta e podem ser ajustados por variável de ambiente:
 1. Os valores dos limites da tabela acima.
 2. A frase "Nenhum dinheiro real é cobrado" na tela de entrada. Antes o dono pediu para não ter faixa de "ambiente de teste", mas agora o site fica aberto a estranhos, e um aviso discreto evita que alguém pense que pagou de verdade. O resto do app continua sem faixa.
 3. Uma carteira já cadastrada pelo operador entra direto na conta existente, sem passar por "Criar conta".
-4. O visitante não vê o painel do operador. O histórico na carteira já mostra os estados e o link para a rede.
-5. Revisão do construtor:
+4. Visual: as cores de Maricá no gradiente (em vez do Prism azul e branco) e a variante amarela `marica` no botão (em vez do `amber` com texto branco, que não passa no contraste).
+5. O visitante não vê o painel do operador. O histórico na carteira já mostra os estados e o link para a rede.
+6. Revisão do construtor:
    - o mínimo para visitante é **R$ 11**, porque R$ 10 conflitava com o mínimo já existente;
    - compras de visitante ficam marcadas em `payments.created_via`;
    - o teto é reservado na criação;
