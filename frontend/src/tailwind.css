@@ -1,0 +1,5 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@theme { --color-ring: #ffd23f; --color-background: #06150f; --color-primary-foreground: #1a1400; }
+@custom-variant dark (&:where(.dark, .dark *));
