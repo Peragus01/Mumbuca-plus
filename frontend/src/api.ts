@@ -43,6 +43,8 @@ export interface UserDTO {
   createdAt: string;
 }
 
+export type Role = 'operator' | 'visitor';
+
 export interface OpsStatus {
   providerEnv: 'sandbox' | 'live';
   programId: string;
@@ -91,14 +93,22 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown):
   if (!res.ok) {
     const obj = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
     const code = typeof obj.error === 'string' ? obj.error : 'http_error';
-    if (res.status === 401 && path !== '/api/login') onUnauthorized?.();
+    if (res.status === 401 && path !== '/api/login' && !path.startsWith('/api/auth/')) onUnauthorized?.();
     throw new ApiError(res.status, code, obj);
   }
   return data as T;
 }
 
 export const api = {
-  session: () => request<{ authenticated: boolean }>('GET', '/api/session'),
+  session: () => request<{ authenticated: boolean; role: Role | null }>('GET', '/api/session'),
+  me: () => request<{ role: 'operator' } | { role: 'visitor'; user: UserDTO }>('GET', '/api/me'),
+  publicStatus: () => request<{ visitorPurchasesOpen: boolean }>('GET', '/api/public/status'),
+  phantomChallenge: (walletAddress: string) =>
+    request<{ nonce: string; message: string }>('POST', '/api/auth/phantom/challenge', { walletAddress }),
+  phantomVerify: (v: { walletAddress: string; nonce: string; signature: string }) =>
+    request<{ status: 'signed_in' | 'needs_signup' }>('POST', '/api/auth/phantom/verify', v),
+  signup: (displayName: string) =>
+    request<{ status: 'signed_in' }>('POST', '/api/auth/signup', { displayName }),
   login: (password: string) => request<void>('POST', '/api/login', { password }),
   logout: () => request<void>('POST', '/api/logout'),
 

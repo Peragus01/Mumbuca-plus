@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, setUnauthorizedListener } from './api';
+import { api, setUnauthorizedListener, type Role } from './api';
 import { BrandMark } from './components/BrandMark';
 import { CitizenView } from './pages/CitizenView';
-import { Login } from './pages/Login';
+import { Entry } from './pages/Entry';
 import { OperatorView } from './pages/OperatorView';
+import { VisitorApp } from './VisitorApp';
 
 type View = 'carteira' | 'operador';
 
@@ -12,13 +13,13 @@ function viewFromHash(): View {
 }
 
 export function App() {
-  const [auth, setAuth] = useState<'checking' | 'in' | 'out'>('checking');
+  const [auth, setAuth] = useState<'checking' | 'out' | Role>('checking');
   const [view, setView] = useState<View>(viewFromHash);
 
   useEffect(() => {
     setUnauthorizedListener(() => setAuth('out'));
     api.session().then(
-      (s) => setAuth(s.authenticated ? 'in' : 'out'),
+      (s) => setAuth(s.authenticated && s.role ? s.role : 'out'),
       () => setAuth('out'),
     );
     const onHash = () => setView(viewFromHash());
@@ -27,6 +28,13 @@ export function App() {
       setUnauthorizedListener(null);
       window.removeEventListener('hashchange', onHash);
     };
+  }, []);
+
+  const refreshSession = useCallback(() => {
+    api.session().then(
+      (s) => setAuth(s.authenticated && s.role ? s.role : 'out'),
+      () => setAuth('out'),
+    );
   }, []);
 
   const logout = useCallback(async () => {
@@ -45,7 +53,8 @@ export function App() {
       </div>
     );
   }
-  if (auth === 'out') return <Login onLoggedIn={() => setAuth('in')} />;
+  if (auth === 'out') return <Entry onSignedIn={refreshSession} />;
+  if (auth === 'visitor') return <VisitorApp onLogout={() => setAuth('out')} />;
 
   return (
     <div className="app">
