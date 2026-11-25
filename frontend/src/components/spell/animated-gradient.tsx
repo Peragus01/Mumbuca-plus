@@ -1,4 +1,4 @@
-// Spell UI (https://spell.sh) - MIT License, github.com/xxtomm/spell-ui
+// From Spell UI (https://spell.sh) — MIT License, (c) xxtomm
 // Local edits are marked with "LOCAL:".
 "use client";
 
