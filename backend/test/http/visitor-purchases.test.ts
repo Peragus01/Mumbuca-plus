@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../../src/config/env.js';
 import { setupApp, WARMUP_TIMEOUT_MS, warmup } from '../helpers/http-app.js';
 
@@ -76,6 +76,35 @@ describe('visitor purchases', () => {
     const sim = await asA('POST', `/api/payments/${made.json().id}/simulate`);
     expect(sim.statusCode).toBe(409);
     expect(sim.json()).toEqual({ error: 'purchases_closed' });
+  });
+
+  describe('stale charge', () => {
+    afterEach(() => vi.useRealTimers());
+    const advance = (min: number) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.now() + min * 60_000);
+    };
+
+    it('31 min old -> simulate 409 payment_expired and nothing minted', async () => {
+      const { t, create, asA } = await setup();
+      const res = await create('5000');
+      expect(res.statusCode).toBe(201);
+      advance(31);
+      const sim = await asA('POST', `/api/payments/${res.json().id}/simulate`);
+      expect(sim.statusCode).toBe(409);
+      expect(sim.json()).toEqual({ error: 'payment_expired' });
+      await t.app.idle();
+      expect(t.chain.minted).toEqual([]);
+    });
+
+    it('29 min old still works', async () => {
+      const { t, create, asA } = await setup();
+      const res = await create('5000');
+      advance(29);
+      expect((await asA('POST', `/api/payments/${res.json().id}/simulate`)).statusCode).toBe(200);
+      await t.app.idle();
+      expect(t.chain.minted).toHaveLength(1);
+    });
   });
 
   it('low SOL -> 409 purchases_closed', async () => {

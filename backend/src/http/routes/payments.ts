@@ -164,8 +164,9 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
   app.post<{ Params: { id: string } }>('/payments/:id/simulate', async (req, reply) => {
     const p = await findScoped(req, req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
-    if (req.session?.role === 'visitor' && !(await policy.checkPay()).ok) {
-      return reply.code(409).send({ error: 'purchases_closed' });
+    if (req.session?.role === 'visitor') {
+      const r = await policy.checkPay(p);
+      if (!r.ok) return reply.code(409).send({ error: r.error });
     }
     const provider = providers[p.provider];
     if (!provider?.simulatePayment || provider.env === 'live') {

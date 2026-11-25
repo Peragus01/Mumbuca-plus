@@ -8,7 +8,7 @@ export type PolicyResult =
   | { ok: true }
   | {
       ok: false;
-      error: 'amount_out_of_range' | 'purchases_closed' | 'daily_limit' | 'open_payment';
+      error: 'amount_out_of_range' | 'purchases_closed' | 'daily_limit' | 'open_payment' | 'payment_expired';
       minCents?: bigint;
       maxCents?: bigint;
     };
@@ -16,7 +16,7 @@ export type PolicyResult =
 export interface VisitorPolicy {
   checkCreate(userId: string, amountCents: bigint): Promise<PolicyResult>;
   /** Chain / sign-in gate only (the daily cap was already enforced when the charge was created). */
-  checkPay(): Promise<PolicyResult>;
+  checkPay(payment?: { createdVia: string; createdAt: Date }): Promise<PolicyResult>;
   purchasesOpen(): Promise<boolean>;
 }
 
@@ -34,7 +34,7 @@ export function createVisitorPolicy(deps: {
   now?: () => number;
 }): VisitorPolicy {
   const { env, payments, token } = deps;
-  const now = deps.now ?? Date.now;
+  const now = deps.now ?? (() => Date.now());
   const expected = expectedProgramConfig(env);
   const limits = rechargeLimits('simulated', env);
   const minCents = limits.minCents > env.VISITOR_MIN_CENTS ? limits.minCents : env.VISITOR_MIN_CENTS;
@@ -80,8 +80,13 @@ export function createVisitorPolicy(deps: {
       if (cents + amountCents > env.VISITOR_DAILY_CAP_CENTS) return { ok: false, error: 'daily_limit' };
       return OK;
     },
-    async checkPay() {
-      return (await gate()) ? OK : CLOSED;
+    async checkPay(payment) {
+      if (!(await gate())) return CLOSED;
+      // A visitor charge older than STALE_MS stopped counting toward the quotas: it can no longer be paid.
+      if (payment?.createdVia === 'visitor' && payment.createdAt.getTime() < now() - STALE_MS) {
+        return { ok: false, error: 'payment_expired' };
+      }
+      return OK;
     },
     async purchasesOpen() {
       if (!(await gate())) return false;

@@ -141,6 +141,14 @@ describe('visitor policy', () => {
     expect(await policy.purchasesOpen()).toBe(false);
   });
 
+  it('checkPay: a visitor charge older than 30 min is payment_expired; operator ones are not', async () => {
+    const { policy, clock } = await setup();
+    const at = (min: number) => new Date(clock.t - min * 60_000);
+    expect(await policy.checkPay({ createdVia: 'visitor', createdAt: at(29) })).toEqual({ ok: true });
+    expect(error(await policy.checkPay({ createdVia: 'visitor', createdAt: at(31) }))).toBe('payment_expired');
+    expect(await policy.checkPay({ createdVia: 'operator', createdAt: at(31) })).toEqual({ ok: true });
+  });
+
   it('chain status is cached for 30 s', async () => {
     const { policy, chain, clock } = await setup();
     expect(await policy.purchasesOpen()).toBe(true);
