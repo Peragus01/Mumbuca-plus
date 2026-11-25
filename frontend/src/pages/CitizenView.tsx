@@ -207,7 +207,7 @@ export function CitizenView({ visitor }: { visitor?: UserDTO } = {}) {
         <RechargeDialog
           userId={user.id}
           provider={visitor ? 'simulated' : 'ozav'}
-          audience={visitor ? 'visitor' : 'operator'}
+          audience={visitor ? 'visitor' : undefined}
           allowSimulate={!!visitor}
           onClose={() => {
             setRecharging(false);

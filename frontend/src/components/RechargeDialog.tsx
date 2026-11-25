@@ -121,7 +121,7 @@ export function RechargeDialog({
   audience = allowSimulate ? 'operator' : 'visitor',
 }: RechargeDialogProps) {
   const copy = COPY[audience];
-  const pop = audience === 'visitor';
+  const pop = audience === 'visitor' && allowSimulate;
   const amountId = useId();
   const codeId = useId();
   const errorId = useId();

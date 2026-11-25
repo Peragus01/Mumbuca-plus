@@ -202,6 +202,15 @@ describe('CitizenView', () => {
       expect((screen.getByRole('button', { name: /Comprar Mum\+/ }) as HTMLButtonElement).disabled).toBe(true);
     });
 
+    it('operator dialog keeps the purchase wording and has no demo pay button', async () => {
+      stubVisitor();
+      render(<CitizenView />);
+      fireEvent.click(await screen.findByRole('button', { name: /Comprar Mum\+/ }));
+      expect(await screen.findByText('Comprar Mum+ via Pix')).toBeTruthy();
+      expect(screen.queryByText('Recarregar Mum+')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Pagar agora (demonstração)' })).toBeNull();
+    });
+
     it('enables buying when open', async () => {
       stubVisitor(true);
       render(<CitizenView visitor={users[0]} />);
