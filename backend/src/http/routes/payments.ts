@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { Env } from '../../config/env.js';
 import type { Payment, ProviderName } from '../../domain/payment.js';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../processing/payment-processor.js';
 import { ProviderUnavailableError, type ProviderRegistry } from '../../providers/payment-provider.js';
 import type { PaymentRepository } from '../../repositories/payment-repository.js';
+import { requireOperator } from '../auth.js';
 import { errorClass, isUuid } from '../errors.js';
 
 export interface PaymentRoutesOptions {
@@ -62,6 +63,14 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
   const { env, payments, processor, providers } = opts;
   const dto = (p: Payment) => toPaymentDto(p, env.SOLANA_CLUSTER);
   const find = (id: string) => (isUuid(id) ? payments.findById(id) : Promise.resolve(null));
+  /** Own payment for a visitor (someone else's is "not found"); any payment for the operator. */
+  const findScoped = async (req: FastifyRequest, id: string) => {
+    const p = await find(id);
+    if (!p) return null;
+    const s = req.session;
+    if (s?.role === 'visitor' && p.userId.toLowerCase() !== s.userId.toLowerCase()) return null;
+    return p;
+  };
 
   app.post<{ Body: { userId: string; amountCents: string; provider: ProviderName } }>(
     '/payments',
@@ -79,10 +88,18 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
       },
     },
     async (req, reply) => {
-      const { userId, amountCents, provider } = req.body;
+      const { amountCents, provider } = req.body;
+      const visitor = req.session?.role === 'visitor' ? req.session : null;
+      if (visitor && provider !== 'simulated') return reply.code(422).send({ error: 'provider_not_enabled' });
+      const userId = visitor ? visitor.userId : req.body.userId;
       if (!isUuid(userId)) return reply.code(404).send({ error: 'user_not_found' });
       try {
-        const p = await processor.createRecharge({ userId, amountCents: BigInt(amountCents), provider });
+        const p = await processor.createRecharge({
+          userId,
+          amountCents: BigInt(amountCents),
+          provider,
+          ...(visitor ? { createdVia: 'visitor' as const } : {}),
+        });
         return reply.code(201).send(dto(p));
       } catch (e) {
         if (e instanceof RechargeLimitError) {
@@ -105,6 +122,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
     '/payments',
     { schema: { querystring: { type: 'object', properties: { userId: { type: 'string', maxLength: 64 } } } } },
     async (req) => {
+      if (req.session?.role === 'visitor') return (await payments.listByUser(req.session.userId)).map(dto);
       const { userId } = req.query;
       if (userId === undefined) return (await payments.listAll()).map(dto);
       if (!isUuid(userId)) return [];
@@ -113,7 +131,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
   );
 
   app.get<{ Params: { id: string } }>('/payments/:id', async (req, reply) => {
-    const p = await find(req.params.id);
+    const p = await findScoped(req, req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
     return dto(p);
   });
@@ -123,7 +141,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
    * background (signal can take up to MINT_CONFIRM_TIMEOUT_MS) and returns the current DTO.
    */
   app.post<{ Params: { id: string } }>('/payments/:id/simulate', async (req, reply) => {
-    const p = await find(req.params.id);
+    const p = await findScoped(req, req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
     const provider = providers[p.provider];
     if (!provider?.simulatePayment || provider.env === 'live') {
@@ -144,6 +162,7 @@ export const paymentRoutes: FastifyPluginAsync<PaymentRoutesOptions> = async (ap
 
   /** Operator retry: processing runs in the background; responds with the current DTO. */
   app.post<{ Params: { id: string } }>('/payments/:id/reprocess', async (req, reply) => {
+    if (requireOperator(req, reply)) return reply;
     const p = await find(req.params.id);
     if (!p) return reply.code(404).send({ error: 'payment_not_found' });
     app.runInBackground('reprocess', p.id, () => processor.reprocess(p.id));

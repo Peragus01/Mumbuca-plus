@@ -13,6 +13,7 @@ import type { UserRepository } from '../repositories/user-repository.js';
 import { PUBLIC_API_ROUTES, authRoutes, readSession } from './auth.js';
 import { errorClass } from './errors.js';
 import { phantomAuthRoutes } from './routes/phantom-auth.js';
+import { meRoutes } from './routes/me.js';
 import { opsRoutes } from './routes/ops.js';
 import { paymentRoutes } from './routes/payments.js';
 import { userRoutes } from './routes/users.js';
@@ -100,6 +101,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       });
       await api.register(authRoutes, { password: env.DEMO_PASSWORD, secureCookie });
       await api.register(phantomAuthRoutes, { env, users, auth, secureCookie });
+      await api.register(meRoutes, { users });
       await api.register(userRoutes, { users, token });
       await api.register(paymentRoutes, { env, payments, processor, providers });
       await api.register(opsRoutes, { env, token });

@@ -52,7 +52,8 @@ export const userRoutes: FastifyPluginAsync<UserRoutesOptions> = async (app, { u
   );
 
   app.get<{ Params: { id: string } }>('/users/:id/balance', async (req, reply) => {
-    const user = isUuid(req.params.id) ? await users.findById(req.params.id) : null;
+    const own = req.session?.role === 'visitor' && req.session.userId.toLowerCase() !== req.params.id.toLowerCase();
+    const user = !own && isUuid(req.params.id) ? await users.findById(req.params.id) : null;
     if (!user) return reply.code(404).send({ error: 'user_not_found' });
     try {
       const units = await token.balanceOf(user.walletAddress);

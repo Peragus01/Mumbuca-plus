@@ -4,6 +4,7 @@ import { mintPda } from '../../chain/pdas.js';
 import type { ProgramConfigIssue } from '../../chain/program-client.js';
 import type { TokenGateway } from '../../chain/token-gateway.js';
 import type { Env } from '../../config/env.js';
+import { requireOperator } from '../auth.js';
 import { errorClass } from '../errors.js';
 
 export interface OpsRoutesOptions {
@@ -16,6 +17,7 @@ export const opsRoutes: FastifyPluginAsync<OpsRoutesOptions> = async (app, { env
   const expected = expectedProgramConfig(env);
 
   app.get('/ops/status', async (req, reply) => {
+    if (requireOperator(req, reply)) return reply;
     let paused: boolean;
     let configIssues: ProgramConfigIssue[];
     let lamports: bigint;

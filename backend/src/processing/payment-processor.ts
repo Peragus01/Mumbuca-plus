@@ -1,6 +1,6 @@
 import type { Env } from '../config/env.js';
 import { centsToUnits, paymentRefFor } from '../domain/money.js';
-import { rechargeLimits, type Payment, type PaymentStatus, type ProviderName } from '../domain/payment.js';
+import { rechargeLimits, type CreatedVia, type Payment, type PaymentStatus, type ProviderName } from '../domain/payment.js';
 import { parseSolanaAddress } from '../domain/solana-address.js';
 import {
   MintRejectedError,
@@ -32,7 +32,12 @@ export interface PaymentProcessorDeps {
 export type SignalSource = 'webhook' | 'reconciler' | 'operator';
 
 export interface PaymentProcessor {
-  createRecharge(input: { userId: string; amountCents: bigint; provider: ProviderName }): Promise<Payment>;
+  createRecharge(input: {
+    userId: string;
+    amountCents: bigint;
+    provider: ProviderName;
+    createdVia?: CreatedVia;
+  }): Promise<Payment>;
   signal(paymentId: string, source: SignalSource): Promise<void>;
   /** Advances the payment as far as possible; serialized process-wide. */
   process(paymentId: string): Promise<Payment>;
@@ -395,7 +400,7 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
   }
 
   return {
-    async createRecharge({ userId, amountCents, provider: providerName }) {
+    async createRecharge({ userId, amountCents, provider: providerName, createdVia }) {
       const user = await users.findById(userId);
       if (!user) throw new UnknownUserError(userId);
       const provider = providers[providerName];
@@ -408,6 +413,7 @@ export function createPaymentProcessor(deps: PaymentProcessorDeps): PaymentProce
         provider: providerName,
         providerEnv: provider.env,
         requestedAmountCents: amountCents,
+        createdVia,
       });
 
       let charge: { providerPaymentId: string; pixBrCode: string | null; pixExpiresAt: Date | null };
