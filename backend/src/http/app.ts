@@ -8,9 +8,11 @@ import type { Env } from '../config/env.js';
 import type { PaymentProcessor } from '../processing/payment-processor.js';
 import type { ProviderRegistry } from '../providers/payment-provider.js';
 import type { PaymentRepository } from '../repositories/payment-repository.js';
+import type { AuthRepository } from '../repositories/auth-repository.js';
 import type { UserRepository } from '../repositories/user-repository.js';
 import { PUBLIC_API_ROUTES, authRoutes, readSession } from './auth.js';
 import { errorClass } from './errors.js';
+import { phantomAuthRoutes } from './routes/phantom-auth.js';
 import { opsRoutes } from './routes/ops.js';
 import { paymentRoutes } from './routes/payments.js';
 import { userRoutes } from './routes/users.js';
@@ -32,6 +34,7 @@ export interface AppDeps {
   env: Env;
   payments: PaymentRepository;
   users: UserRepository;
+  auth: AuthRepository;
   processor: PaymentProcessor;
   providers: ProviderRegistry;
   token: TokenGateway;
@@ -45,7 +48,7 @@ export interface AppDeps {
 }
 
 export function buildApp(deps: AppDeps): FastifyInstance {
-  const { env, payments, users, processor, providers, token, staticDir } = deps;
+  const { env, payments, users, auth, processor, providers, token, staticDir } = deps;
   const app = Fastify({
     logger: deps.logger ?? false,
     trustProxy: deps.trustProxy ?? false,
@@ -96,6 +99,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         if (!req.session) return reply.code(401).send({ error: 'unauthorized' });
       });
       await api.register(authRoutes, { password: env.DEMO_PASSWORD, secureCookie });
+      await api.register(phantomAuthRoutes, { env, users, auth, secureCookie });
       await api.register(userRoutes, { users, token });
       await api.register(paymentRoutes, { env, payments, processor, providers });
       await api.register(opsRoutes, { env, token });

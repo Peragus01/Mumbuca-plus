@@ -14,6 +14,7 @@ import type { ProviderRegistry } from './providers/payment-provider.js';
 import { createOzavProvider } from './providers/ozav/ozav-provider.js';
 import { createSimulatedProvider } from './providers/simulated-provider.js';
 import { PaymentRepository } from './repositories/payment-repository.js';
+import { AuthRepository } from './repositories/auth-repository.js';
 import { UserRepository } from './repositories/user-repository.js';
 
 /** backend/ — works from src/main.ts (tsx) and dist/src/main.js (tsc build). */
@@ -50,6 +51,7 @@ async function main(): Promise<void> {
   const db = createPgDb(env.DATABASE_URL, env.DATABASE_SSL);
   await migrate(db, path.join(root, 'migrations'));
   const users = new UserRepository(db);
+  const auth = new AuthRepository(db);
   const payments = new PaymentRepository(db);
 
   const token = createSolanaTokenGateway({
@@ -93,6 +95,7 @@ async function main(): Promise<void> {
     env,
     payments,
     users,
+    auth,
     processor,
     providers,
     token,

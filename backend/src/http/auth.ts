@@ -23,7 +23,7 @@ declare module 'fastify' {
   }
 }
 
-const SIGNUP_COOKIE = 'mp_signup';
+export const SIGNUP_COOKIE = 'mp_signup';
 const V1_RE = /^v1:(\d{1,15})$/;
 const V2_OP_RE = /^v2:op:(\d{1,15})$/;
 const V2_VIS_RE = /^v2:vis:([0-9a-fA-F-]{36}):(\d{1,15})$/;

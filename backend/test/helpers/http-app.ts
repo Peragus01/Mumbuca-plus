@@ -6,6 +6,7 @@ import { createPaymentProcessor } from '../../src/processing/payment-processor.j
 import type { ProviderRegistry, WebhookResult } from '../../src/providers/payment-provider.js';
 import { verifyOzavWebhook } from '../../src/providers/ozav/ozav-signature.js';
 import { createSimulatedProvider } from '../../src/providers/simulated-provider.js';
+import { AuthRepository } from '../../src/repositories/auth-repository.js';
 import { PaymentRepository } from '../../src/repositories/payment-repository.js';
 import { UserRepository } from '../../src/repositories/user-repository.js';
 import { FakeChain, FakeProvider } from './fakes.js';
@@ -37,13 +38,14 @@ async function freshDb(): Promise<Db> {
 export async function setupApp(over: Partial<Env> = {}, opts: { staticDir?: string } = {}) {
   const db = await freshDb();
   const users = new UserRepository(db);
+  const auth = new AuthRepository(db);
   const payments = new PaymentRepository(db);
   const env: Env = { ...loadEnv(validEnv), MINT_CONFIRM_TIMEOUT_MS: 10, ...over };
   const chain = new FakeChain();
   const ozav = new WebhookFakeProvider();
   const providers: ProviderRegistry = { ozav, simulated: createSimulatedProvider(db), mercadopago: undefined };
   const processor = createPaymentProcessor({ payments, users, providers, token: chain, env, log: quiet });
-  const app = buildApp({ env, payments, users, processor, providers, token: chain, staticDir: opts.staticDir });
+  const app = buildApp({ env, payments, users, auth, processor, providers, token: chain, staticDir: opts.staticDir });
   await app.ready();
 
   async function login(): Promise<string> {
@@ -62,7 +64,7 @@ export async function setupApp(over: Partial<Env> = {}, opts: { staticDir?: stri
   const newUser = (handle = 'ana') =>
     users.create({ handle, displayName: handle.toUpperCase(), walletAddress: Keypair.generate().publicKey.toBase58() });
 
-  return { db, app, env, chain, ozav, providers, processor, users, payments, cookie, login, visitorCookie, api, newUser };
+  return { db, app, env, auth, chain, ozav, providers, processor, users, payments, cookie, login, visitorCookie, api, newUser };
 }
 
 export function signedWebhook(event: object, opts: { secret?: string; t?: number } = {}) {
