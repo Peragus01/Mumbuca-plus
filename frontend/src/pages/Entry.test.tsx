@@ -91,11 +91,19 @@ describe('Entry', () => {
     expect(await screen.findByText('Muitas tentativas. Tente mais tarde.')).toBeTruthy();
   });
 
-  it('operator link reveals the password form and calls api.login', async () => {
+  it('the public entry has no operator link nor password field', () => {
+    render(<Entry onSignedIn={() => {}} />);
+    expect(screen.queryByRole('button', { name: 'Sou operador' })).toBeNull();
+    expect(screen.queryByText(/operador/i)).toBeNull();
+    expect(screen.queryByLabelText('Senha de acesso')).toBeNull();
+  });
+
+  it('operator access (/operador) shows only the password form and calls api.login', async () => {
     const login = vi.spyOn(api, 'login').mockResolvedValue(undefined);
     const onSignedIn = vi.fn();
-    render(<Entry onSignedIn={onSignedIn} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sou operador' }));
+    render(<Entry onSignedIn={onSignedIn} operatorAccess />);
+    expect(screen.queryByRole('button', { name: 'Entrar com Phantom' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Acesso do operador' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
     expect(screen.getByText('Informe a senha de acesso.')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Senha de acesso'), { target: { value: 'segredo' } });

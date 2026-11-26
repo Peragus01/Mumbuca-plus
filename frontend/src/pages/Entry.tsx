@@ -27,13 +27,16 @@ function phantomErrorMessage(err: unknown): string {
   return 'Não conseguimos entrar agora. Tente de novo.';
 }
 
-export function Entry({ onSignedIn }: { onSignedIn: () => void }) {
+/**
+ * Public entry (Phantom sign-in). With `operatorAccess` (route /operador, not linked anywhere) it
+ * shows only the operator password form.
+ */
+export function Entry({ onSignedIn, operatorAccess = false }: { onSignedIn: () => void; operatorAccess?: boolean }) {
   const pwId = useId();
   const errId = useId();
   const [stage, setStage] = useState<Stage>({ name: 'home' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [operator, setOperator] = useState(false);
   const [password, setPassword] = useState('');
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwBusy, setPwBusy] = useState(false);
@@ -80,6 +83,40 @@ export function Entry({ onSignedIn }: { onSignedIn: () => void }) {
     } finally {
       setPwBusy(false);
     }
+  }
+
+  if (operatorAccess) {
+    return (
+      <EntryShell soft>
+        <div className="entry__card">
+          <BrandMark size={44} wordmark />
+          <h1 className="entry__title">Acesso do operador</h1>
+          <form className="stack entry__operator" onSubmit={submitPassword} noValidate>
+            <div className="field">
+              <label htmlFor={pwId}>Senha de acesso</label>
+              <input
+                id={pwId}
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={pwError ? true : undefined}
+                aria-describedby={pwError ? errId : undefined}
+                autoFocus
+              />
+            </div>
+            {pwError && (
+              <p id={errId} className="alert alert--danger" role="alert">
+                {pwError}
+              </p>
+            )}
+            <PopButton color="marica" type="submit" disabled={pwBusy}>
+              {pwBusy ? 'Entrando…' : 'Entrar'}
+            </PopButton>
+          </form>
+        </div>
+      </EntryShell>
+    );
   }
 
   if (stage.name === 'create') {
@@ -138,35 +175,6 @@ export function Entry({ onSignedIn }: { onSignedIn: () => void }) {
           </p>
         )}
         <p className="entry__note muted small">Rede de testes Solana · nenhum dinheiro real é cobrado</p>
-        {operator ? (
-          <form className="stack entry__operator" onSubmit={submitPassword} noValidate>
-            <div className="field">
-              <label htmlFor={pwId}>Senha de acesso</label>
-              <input
-                id={pwId}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                aria-invalid={pwError ? true : undefined}
-                aria-describedby={pwError ? errId : undefined}
-                autoFocus
-              />
-            </div>
-            {pwError && (
-              <p id={errId} className="alert alert--danger" role="alert">
-                {pwError}
-              </p>
-            )}
-            <PopButton color="default" type="submit" disabled={pwBusy}>
-              {pwBusy ? 'Entrando…' : 'Entrar'}
-            </PopButton>
-          </form>
-        ) : (
-          <button type="button" className="entry__link" onClick={() => setOperator(true)}>
-            Sou operador
-          </button>
-        )}
       </div>
     </EntryShell>
   );
