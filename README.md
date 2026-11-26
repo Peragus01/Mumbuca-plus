@@ -406,6 +406,7 @@ O contrato inteligente do Mumbuca+ é um **programa Solana escrito em Rust com A
 | `mint_for_payment(payment_ref, amount)` | Só o emissor | Emite `amount` Mum+ na carteira do comprador por um pagamento liquidado. Cria a conta de token da carteira se ela ainda não existir |
 | `pause` / `unpause` | Só o pausador | Suspende ou retoma **novas emissões**. Saldos e transferências não são afetados |
 | `set_minter`, `set_pauser`, `set_max_mint_per_tx` | Só o administrador | Troca o emissor, troca o pausador e ajusta o limite por emissão |
+| `set_metadata_uri(uri)` | Só o administrador | Aponta os metadados do token para o JSON com a logo (até 200 bytes, `UriTooLong` acima disso) |
 
 Antes de cada emissão, o programa confere que:
 - quem assina é o emissor (senão, `Unauthorized`);
@@ -430,6 +431,7 @@ Antes de cada emissão, o programa confere que:
 | Decimais | 2. 1 unidade = R$ 0,01, então centavos viram unidades sem conversão |
 | Autoridade de emissão | PDA de configuração do programa |
 | Autoridade de congelamento | Nenhuma |
+| Logo e metadados | [mum.json](https://mumbuca-plus-production.up.railway.app/token/mum.json), com a logo oficial em petróleo |
 | Supply inicial | 0. Tudo é emitido contra pagamento liquidado (DvP) |
 | Teto de supply | 10.000.000 Mum+ |
 | Limite por emissão | 20.000 Mum+ (ajustável pelo administrador) |
@@ -438,7 +440,27 @@ Antes de cada emissão, o programa confere que:
 
 **Paridade:** 1 Mum+ = R$ 1,00.
 
-**Testes do programa:** 17 testes em Rust contra o runtime da Solana (LiteSVM). Eles cobrem as emissões permitidas e cada recusa: emissor errado, pausa, valor zero, limite por emissão, teto e pagamento repetido.
+**Testes do programa:** 20 testes em Rust contra o runtime da Solana (LiteSVM). Eles cobrem as emissões permitidas e cada recusa: emissor errado, pausa, valor zero, limite por emissão, teto, pagamento repetido e troca de metadados por quem não é administrador.
+
+### Verificação da compilação (build reproduzível)
+
+Qualquer pessoa pode confirmar que o programa na devnet foi compilado **exatamente** a partir deste repositório, sem confiar no autor:
+
+| Item | Valor |
+|---|---|
+| Commit de origem | [`2fbe1ff`](https://github.com/Peragus01/Mumbuca-plus/commit/2fbe1ffe05fbb67150be137d8444892f2b020f4b) (pasta `anchor/`) |
+| Ambiente | Contêiner Docker oficial da Solana Foundation (`solana-verify`), Solana 4.1.2 |
+| Hash do programa compilado | `2ec3700b775207c75550e0117baff4cc4bc8ae206add48e80b3fde3dda4af50b` |
+| Hash do programa na devnet | `2ec3700b775207c75550e0117baff4cc4bc8ae206add48e80b3fde3dda4af50b`, idêntico |
+| Registro on-chain da verificação | [transação na devnet](https://explorer.solana.com/tx/56MPoLPXaMpMD8oy7Kn5Mxg5jiNrwikrFpdTC9XvjijksR4bKBqy5CyR6Sw4Kt9JjWsFfRfRpstpWbgtZwDr8GHY?cluster=devnet), assinada pela autoridade de atualização |
+
+Para reproduzir (requer Docker e `cargo install solana-verify`):
+
+```bash
+solana-verify verify-from-repo -u devnet --program-id HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm https://github.com/Peragus01/Mumbuca-plus --commit-hash 2fbe1ffe05fbb67150be137d8444892f2b020f4b --library-name mumbuca_plus --mount-path anchor
+```
+
+O comando recompila no contêiner oficial e compara com o que está na rede. O resultado esperado é `Program hash matches ✅`. O selo "Verified Build" do Solana Explorer depende do serviço da OtterSec, que hoje atende só a mainnet; na devnet, a prova é esta comparação de hashes, que qualquer um pode repetir.
 
 ## 12. Como isso fortalece a política pública
 
