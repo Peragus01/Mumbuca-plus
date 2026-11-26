@@ -41,4 +41,20 @@ describe('App', () => {
     expect(screen.queryByText('Operador')).toBeNull();
     expect(fetchMock.mock.calls.some((c) => c[0] === '/api/users')).toBe(false);
   });
+
+  it("serves the operator login only at /operador; the home page has no operator entry", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json({ authenticated: false, role: null })));
+
+    window.history.pushState({}, "", "/");
+    render(<App />);
+    expect(await screen.findByRole("button", { name: "Entrar com Phantom" })).toBeTruthy();
+    expect(screen.queryByLabelText("Senha de acesso")).toBeNull();
+    cleanup();
+
+    window.history.pushState({}, "", "/operador");
+    render(<App />);
+    expect(await screen.findByLabelText("Senha de acesso")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Entrar com Phantom" })).toBeNull();
+    window.history.pushState({}, "", "/");
+  });
 });

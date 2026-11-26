@@ -8,8 +8,13 @@ import { VisitorApp } from './VisitorApp';
 
 type View = 'carteira' | 'operador';
 
+/** Operator login lives at /operador only (not linked from the public entry). */
+function isOperatorRoute(): boolean {
+  return window.location.pathname.replace(/\/+$/, '') === '/operador';
+}
+
 function viewFromHash(): View {
-  return window.location.hash === '#/operador' ? 'operador' : 'carteira';
+  return window.location.hash === '#/operador' || isOperatorRoute() ? 'operador' : 'carteira';
 }
 
 export function App() {
@@ -53,7 +58,7 @@ export function App() {
       </div>
     );
   }
-  if (auth === 'out') return <Entry onSignedIn={refreshSession} />;
+  if (auth === 'out') return <Entry onSignedIn={refreshSession} operatorAccess={isOperatorRoute()} />;
   if (auth === 'visitor') return <VisitorApp onLogout={() => setAuth('out')} />;
 
   return (

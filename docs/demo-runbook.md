@@ -47,7 +47,7 @@ Marque cada item e anote data e hora.
 
 O caminho principal é o **Simulado**: nenhum dinheiro real e nenhuma dependência do parceiro de liquidez. Site: https://mumbuca-plus-production.up.railway.app
 
-1. **Operador (senha).** Na tela de entrada, clique em **Sou operador** e entre com `DEMO_PASSWORD`. Mostre o painel: saldo de SOL da minter, estado do programa ("Ativo") e a lista de pagamentos.
+1. **Operador (senha).** Abra o endereço de acesso do operador (não há link na tela pública; o dono tem o endereço) e entre com `DEMO_PASSWORD`. Mostre o painel: saldo de SOL da minter, estado do programa ("Ativo") e a lista de pagamentos.
 2. **Visitante (Phantom).** Em outra janela ou no celular, com a Phantom em Devnet (Settings, Developer settings, Testnet mode, Solana Devnet):
    - clique em **Entrar com Phantom** (assina uma mensagem; nenhuma transação é autorizada);
    - na primeira vez, clique em **Criar conta** e escolha um nome de exibição;
