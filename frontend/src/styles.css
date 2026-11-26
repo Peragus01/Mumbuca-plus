@@ -1557,3 +1557,54 @@ textarea.code {
 .visitor-app > .content {
   position: relative;
 }
+
+/* Animated CSS fallback for the Maricá gradient when WebGL2 is unavailable. */
+.gradient-fallback {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #06150f;
+}
+.gradient-fallback__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.85;
+  will-change: transform;
+}
+.gradient-fallback__blob:nth-child(1) {
+  width: 60vmax;
+  height: 50vmax;
+  left: -10%;
+  top: -15%;
+  background: radial-gradient(circle, #3dffa8 0%, transparent 65%);
+  animation: gradient-drift-a 16s ease-in-out infinite alternate;
+}
+.gradient-fallback__blob:nth-child(2) {
+  width: 55vmax;
+  height: 45vmax;
+  right: -15%;
+  top: 25%;
+  background: radial-gradient(circle, #ffd23f 0%, transparent 65%);
+  animation: gradient-drift-b 19s ease-in-out infinite alternate;
+}
+.gradient-fallback__blob:nth-child(3) {
+  width: 70vmax;
+  height: 55vmax;
+  left: 15%;
+  bottom: -25%;
+  background: radial-gradient(circle, #0f7a55 0%, transparent 70%);
+  animation: gradient-drift-c 23s ease-in-out infinite alternate;
+}
+@keyframes gradient-drift-a {
+  to { transform: translate(30%, 20%) scale(1.2); }
+}
+@keyframes gradient-drift-b {
+  to { transform: translate(-35%, -15%) scale(0.85); }
+}
+@keyframes gradient-drift-c {
+  to { transform: translate(-15%, -30%) scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gradient-fallback__blob { animation: none; }
+}

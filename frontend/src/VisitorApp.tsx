@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api, type UserDTO } from './api';
 import { BrandMark } from './components/BrandMark';
-import AnimatedGradient from './components/spell/animated-gradient';
+import { MaricaGradient } from './components/MaricaGradient';
 import { CitizenView } from './pages/CitizenView';
 import { getPhantom } from './phantom';
-
-function prefersReducedMotion(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 /** Visitor app: brand, greeting, logout and the wallet. No tabs, no operator surface. */
 export function VisitorApp({ onLogout }: { onLogout: () => void }) {
@@ -32,21 +28,13 @@ export function VisitorApp({ onLogout }: { onLogout: () => void }) {
     }
   }
 
-  const gradient = {
-    preset: 'custom',
-    color1: '#06150f',
-    color2: '#3dffa8',
-    color3: '#ffd23f',
-    ...(prefersReducedMotion() ? { speed: 0 } : {}),
-  } as const;
-
   return (
     <div className="app visitor-app">
       <a className="skip-link" href="#conteudo">
         Pular para o conteúdo
       </a>
       <div className="visitor-app__bg" aria-hidden="true">
-        <AnimatedGradient config={gradient} />
+        <MaricaGradient />
       </div>
       <header className="topbar">
         <div className="topbar__inner">

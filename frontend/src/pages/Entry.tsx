@@ -1,20 +1,18 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError, api } from '../api';
 import { BrandMark } from '../components/BrandMark';
-import AnimatedGradient from '../components/spell/animated-gradient';
+import { MaricaGradient } from '../components/MaricaGradient';
 import { PopButton } from '../components/spell/pop-button';
 import { connectAndSign, getPhantom, isUserRejection } from '../phantom';
 import { CreateAccount } from './CreateAccount';
 
 type Stage = { name: 'home' } | { name: 'nophantom' } | { name: 'create'; wallet: string };
 
-const GRADIENT = { preset: 'custom', color1: '#06150f', color2: '#3dffa8', color3: '#ffd23f' } as const;
-
 export function EntryShell({ soft, children }: { soft?: boolean; children: ReactNode }) {
   return (
     <main className="entry">
       <div className={`entry__bg${soft ? ' entry__bg--soft' : ''}`} aria-hidden="true">
-        <AnimatedGradient config={GRADIENT} />
+        <MaricaGradient />
       </div>
       {soft && <div className="entry__veil" aria-hidden="true" />}
       <div className="entry__body">{children}</div>
