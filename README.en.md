@@ -445,6 +445,7 @@ The Mumbuca+ smart contract is a **Solana program written in Rust with Anchor 1.
 | `mint_for_payment(payment_ref, amount)` | Minter only | Issues `amount` Mum+ to the buyer's wallet for a settled payment. Creates the wallet's token account if it does not exist yet |
 | `pause` / `unpause` | Pauser only | Suspends or resumes **new issuance**. Balances and transfers are not affected |
 | `set_minter`, `set_pauser`, `set_max_mint_per_tx` | Admin only | Changes the minter, changes the pauser and adjusts the per-issuance limit |
+| `set_metadata_uri(uri)` | Admin only | Points the token metadata at the JSON with the logo (up to 200 bytes; `UriTooLong` above that) |
 
 Before each issuance, the program checks that:
 - the signer is the minter (otherwise `Unauthorized`);
@@ -469,6 +470,7 @@ Before each issuance, the program checks that:
 | Decimals | 2. 1 unit = R$ 0.01, so cents map to units with no conversion |
 | Mint authority | The program's configuration PDA |
 | Freeze authority | None |
+| Logo and metadata | [mum.json](https://mumbuca-plus-production.up.railway.app/token/mum.json), with the official petrol-green logo |
 | Initial supply | 0. Everything is issued against settled payment (DvP) |
 | Supply cap | 10,000,000 Mum+ |
 | Per-issuance limit | 20,000 Mum+ (adjustable by the admin) |
@@ -477,7 +479,27 @@ Before each issuance, the program checks that:
 
 **Peg:** 1 Mum+ = R$ 1.00.
 
-**Program tests:** 17 Rust tests against the Solana runtime (LiteSVM). They cover allowed issuance and each rejection: wrong minter, pause, zero amount, per-issuance limit, cap and a repeated payment.
+**Program tests:** 20 Rust tests against the Solana runtime (LiteSVM). They cover allowed issuance and each rejection: wrong minter, pause, zero amount, per-issuance limit, cap, a repeated payment and a metadata change by someone who is not the admin.
+
+### Build verification (reproducible build)
+
+Anyone can confirm that the program on devnet was built **exactly** from this repository, without trusting the author:
+
+| Item | Value |
+|---|---|
+| Source commit | [`2fbe1ff`](https://github.com/Peragus01/Mumbuca-plus/commit/2fbe1ffe05fbb67150be137d8444892f2b020f4b) (`anchor/` folder) |
+| Environment | Official Solana Foundation Docker container (`solana-verify`), Solana 4.1.2 |
+| Hash of the built program | `2ec3700b775207c75550e0117baff4cc4bc8ae206add48e80b3fde3dda4af50b` |
+| Hash of the program on devnet | `2ec3700b775207c75550e0117baff4cc4bc8ae206add48e80b3fde3dda4af50b`, identical |
+| On-chain verification record | [devnet transaction](https://explorer.solana.com/tx/56MPoLPXaMpMD8oy7Kn5Mxg5jiNrwikrFpdTC9XvjijksR4bKBqy5CyR6Sw4Kt9JjWsFfRfRpstpWbgtZwDr8GHY?cluster=devnet), signed by the upgrade authority |
+
+To reproduce (requires Docker and `cargo install solana-verify`):
+
+```bash
+solana-verify verify-from-repo -u devnet --program-id HfFamsTJgSXssGkCgBqtNsDLD694peLYBbAzs4kuYzZm https://github.com/Peragus01/Mumbuca-plus --commit-hash 2fbe1ffe05fbb67150be137d8444892f2b020f4b --library-name mumbuca_plus --mount-path anchor
+```
+
+The command rebuilds in the official container and compares the result with what is on the network. The expected result is `Program hash matches ✅`. Solana Explorer's "Verified Build" badge depends on OtterSec's service, which currently covers mainnet only; on devnet, the proof is this hash comparison, which anyone can repeat.
 
 ## 12. How this strengthens the public policy
 
